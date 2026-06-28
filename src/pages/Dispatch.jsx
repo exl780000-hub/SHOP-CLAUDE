@@ -7,14 +7,55 @@ const C = {
 };
 
 const DISPATCH_TYPES = [
-  { type: "📐 打版單", tailors: ["經理"], content: "full" },
-  { type: "🧵 毛胚製作單", tailors: ["駐店師傅", "經理"], content: "styles" },
-  { type: "👔 外套製作單", tailors: ["外套師傅"], content: "jacket" },
-  { type: "👖 褲子製作單", tailors: ["褲子師傅"], content: "trouser" },
-  { type: "🦺 背心製作單", tailors: ["外套師傅", "褲子師傅"], content: "vest" },
-  { type: "✂️ 外套修改單", tailors: ["外套師傅"], content: "alter" },
-  { type: "✂️ 褲子修改單", tailors: ["駐店師傅"], content: "alter" },
+  { type: "📐 打版單",    tailors: ["經理"],                    content: "full" },
+  { type: "🧵 毛胚製作單", tailors: ["駐店師傅", "經理"],         content: "styles" },
+  { type: "👔 外套製作單", tailors: ["外套師傅"],                content: "jacket" },
+  { type: "👖 褲子製作單", tailors: ["褲子師傅"],                content: "trouser" },
+  { type: "🦺 背心製作單", tailors: ["外套師傅", "褲子師傅"],     content: "vest" },
+  { type: "✂️ 外套修改單", tailors: ["外套師傅"],                content: "alter-jacket" },
+  { type: "✂️ 褲子修改單", tailors: ["駐店師傅"],                content: "alter-trouser" },
 ];
+
+// 修改項目定義（含工資供參考，不顯示給師傅）
+const ALTER_JACKET = [
+  { key: "肩領",   wage: 300 },
+  { key: "袖子",   wage: 200 },
+  { key: "腰身",   wage: 250 },
+  { key: "袖長單手", wage: 80 },
+  { key: "袖長雙手", wage: 160 },
+];
+const ALTER_TROUSER = [
+  { key: "腰身",  wage: 250 },
+  { key: "褲長",  wage: 100 },
+  { key: "褲腳",  wage: 100 },
+  { key: "褲管",  wage: 150 },
+  { key: "臀圍",  wage: 200 },
+];
+
+function AlterBlock({ items, checked, onToggle, extraNote, onNote }) {
+  return (
+    <div>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
+        {items.map(({ key }) => {
+          const active = checked.includes(key);
+          return (
+            <button key={key} onClick={() => onToggle(key)} style={{
+              cursor: "pointer", borderRadius: 8, fontSize: 13, fontWeight: 600, padding: "8px 14px",
+              border: `1px solid ${active ? C.gold : C.border}`,
+              background: active ? C.gold + "22" : C.mid,
+              color: active ? C.gold : C.sage,
+            }}>
+              {active ? "☑ " : "☐ "}{key}
+            </button>
+          );
+        })}
+      </div>
+      <div style={{ fontSize: 11, color: C.sage, marginBottom: 5 }}>特殊說明（選填）</div>
+      <textarea value={extraNote} onChange={e => onNote(e.target.value)} placeholder="其他修改要求..."
+        style={{ width: "100%", boxSizing: "border-box", background: C.mid, border: `1px solid ${C.border}`, borderRadius: 8, padding: "9px 12px", color: C.ivory, fontSize: 13, outline: "none", resize: "vertical", minHeight: 55 }} />
+    </div>
+  );
+}
 
 export default function Dispatch() {
   const [search, setSearch] = useState("");
@@ -24,6 +65,8 @@ export default function Dispatch() {
   const [dtype, setDtype] = useState(null);
   const [tailor, setTailor] = useState("");
   const [deadline, setDeadline] = useState("");
+  const [alterChecked, setAlterChecked] = useState([]);
+  const [alterNote, setAlterNote] = useState("");
   const [result, setResult] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -39,13 +82,25 @@ export default function Dispatch() {
 
   useEffect(() => { doSearch(); }, []);
 
+  const toggleAlter = (key) => {
+    setAlterChecked(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
+  };
+
+  const isAlter = dtype?.content === "alter-jacket" || dtype?.content === "alter-trouser";
+  const alterItems = dtype?.content === "alter-jacket" ? ALTER_JACKET : ALTER_TROUSER;
+
   const buildContent = (order, content) => {
-    if (content === "jacket") return `外套樣式\n${order.jacketStyle || "—"}`;
+    if (content === "jacket")  return `外套樣式\n${order.jacketStyle || "—"}`;
     if (content === "trouser") return `褲子樣式\n${order.trouserStyle || "—"}`;
-    if (content === "vest") return `背心樣式\n${order.vestStyle || "—"}`;
-    if (content === "styles") return `【樣式明細】\n外套：${order.jacketStyle || "—"}\n褲子：${order.trouserStyle || "—"}\n背心：${order.vestStyle || "—"}`;
-    if (content === "full") return `【完整製作資訊】\n外套：${order.jacketStyle || "—"}\n褲子：${order.trouserStyle || "—"}\n背心：${order.vestStyle || "—"}\n（量身尺寸請見訂單關聯量身記錄）`;
-    if (content === "alter") return "修改項目：（請填寫）";
+    if (content === "vest")    return `背心樣式\n${order.vestStyle || "—"}`;
+    if (content === "styles")  return `【樣式明細】\n外套：${order.jacketStyle || "—"}\n褲子：${order.trouserStyle || "—"}\n背心：${order.vestStyle || "—"}`;
+    if (content === "full")    return `【完整製作資訊】\n外套：${order.jacketStyle || "—"}\n褲子：${order.trouserStyle || "—"}\n背心：${order.vestStyle || "—"}\n（量身尺寸請見訂單關聯量身記錄）`;
+    if (content === "alter-jacket" || content === "alter-trouser") {
+      const lines = alterChecked.length > 0
+        ? alterChecked.map(k => `• ${k}`).join("\n")
+        : "（未勾選項目）";
+      return `修改項目：\n${lines}${alterNote ? `\n特殊：${alterNote}` : ""}`;
+    }
     return "";
   };
 
@@ -66,10 +121,18 @@ export default function Dispatch() {
       if (!d.success) throw new Error(d.error);
       setResult({ ok: true, msg: "派工單已建立！", url: d.dispatchUrl });
       setDtype(null); setTailor(""); setDeadline("");
+      setAlterChecked([]); setAlterNote("");
     } catch (e) {
       setResult({ ok: false, msg: e.message });
     }
     setSubmitting(false);
+  };
+
+  const handleSelectDtype = (dt) => {
+    setDtype(dt);
+    setTailor(dt.tailors[0]);
+    setAlterChecked([]);
+    setAlterNote("");
   };
 
   const Sec = ({ title, children }) => (
@@ -84,6 +147,7 @@ export default function Dispatch() {
       <Sec title="🔍 選擇訂單">
         <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="客戶名或訂單編號"
+            onKeyDown={e => e.key === "Enter" && doSearch()}
             style={{ flex: 1, background: C.mid, border: `1px solid ${C.border}`, borderRadius: 8, padding: "9px 12px", color: C.ivory, fontSize: 14, outline: "none" }} />
           <button onClick={doSearch} style={{ background: C.gold, color: C.bg, border: "none", borderRadius: 8, padding: "9px 16px", fontWeight: 700, cursor: "pointer" }}>搜尋</button>
         </div>
@@ -104,7 +168,7 @@ export default function Dispatch() {
         <Sec title="📋 派工類型">
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {DISPATCH_TYPES.map(dt => (
-              <button key={dt.type} onClick={() => { setDtype(dt); setTailor(dt.tailors[0]); }} style={{
+              <button key={dt.type} onClick={() => handleSelectDtype(dt)} style={{
                 cursor: "pointer", borderRadius: 8, fontSize: 13, fontWeight: 600, padding: "8px 12px",
                 border: `1px solid ${dtype?.type === dt.type ? C.gold : C.border}`,
                 background: dtype?.type === dt.type ? C.gold + "22" : C.mid,
@@ -130,6 +194,24 @@ export default function Dispatch() {
           <div style={{ fontSize: 11, color: C.sage, marginBottom: 5 }}>製作完成期限</div>
           <input type="date" value={deadline} onChange={e => setDeadline(e.target.value)}
             style={{ width: "100%", boxSizing: "border-box", background: C.mid, border: `1px solid ${C.border}`, borderRadius: 8, padding: "9px 12px", color: C.ivory, fontSize: 14, outline: "none" }} />
+        </Sec>
+      )}
+
+      {isAlter && (
+        <Sec title="✂️ 修改項目">
+          <AlterBlock
+            items={alterItems}
+            checked={alterChecked}
+            onToggle={toggleAlter}
+            extraNote={alterNote}
+            onNote={setAlterNote}
+          />
+          {alterChecked.length > 0 && (
+            <div style={{ marginTop: 10, padding: "10px 12px", background: C.mid, borderRadius: 8 }}>
+              <div style={{ fontSize: 11, color: C.sage, marginBottom:4 }}>已勾選</div>
+              <div style={{ fontSize: 13, color: C.gold }}>{alterChecked.join("、")}</div>
+            </div>
+          )}
         </Sec>
       )}
 
