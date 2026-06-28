@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { HashRouter, Routes, Route, NavLink, Navigate } from "react-router-dom";
 import OrderEntry from "./pages/OrderEntry.jsx";
+import Orders from "./pages/Orders.jsx";
 import Dispatch from "./pages/Dispatch.jsx";
 import DispatchTracking from "./pages/DispatchTracking.jsx";
 import QuickExpense from "./pages/QuickExpense.jsx";
@@ -12,10 +13,11 @@ const C = {
 };
 
 const TABS = [
-  { to: "/order", label: "訂單系統", icon: "📋" },
+  { to: "/order",    label: "新增訂單", icon: "📋" },
+  { to: "/orders",   label: "訂單查詢", icon: "🔍" },
   { to: "/dispatch", label: "派工管理", icon: "✂️" },
   { to: "/tracking", label: "派工追蹤", icon: "📊" },
-  { to: "/expense", label: "快速記帳", icon: "💰" },
+  { to: "/expense",  label: "記帳",    icon: "💰" },
 ];
 
 function Layout({ children }) {
@@ -31,11 +33,11 @@ function Layout({ children }) {
       <nav style={{ position: "fixed", bottom: 0, left: 0, right: 0, background: C.card, borderTop: `1px solid ${C.border}`, display: "flex", justifyContent: "space-around", padding: "8px 0" }}>
         {TABS.map(t => (
           <NavLink key={t.to} to={t.to} style={({ isActive }) => ({
-            display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
-            textDecoration: "none", fontSize: 11, fontWeight: 600,
+            display: "flex", flexDirection: "column", alignItems: "center", gap: 2,
+            textDecoration: "none", fontSize: 10, fontWeight: 600,
             color: isActive ? C.gold : C.sage,
           })}>
-            <span style={{ fontSize: 18 }}>{t.icon}</span>
+            <span style={{ fontSize: 16 }}>{t.icon}</span>
             {t.label}
           </NavLink>
         ))}
@@ -51,6 +53,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Navigate to="/order" replace />} />
           <Route path="/order" element={<OrderEntry />} />
+          <Route path="/orders" element={<Orders />} />
           <Route path="/dispatch" element={<Dispatch />} />
           <Route path="/tracking" element={<DispatchTracking />} />
           <Route path="/expense" element={<QuickExpense />} />
