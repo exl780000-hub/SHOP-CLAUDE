@@ -1,4 +1,4 @@
-import { DB, createPage, prop, cors } from "./_notion.js";
+import { DB, queryDatabase, createPage, prop, cors } from "./_notion.js";
 
 export default async function handler(req, res) {
   cors(res);
@@ -8,6 +8,30 @@ export default async function handler(req, res) {
   try {
     const { orderId, orderName, dispatchType, tailor, deadline, content } = req.body;
 
+    let finalContent = content || "";
+
+    // 打版單：自動附上量身資料
+    if (dispatchType === "📐 打版單" && orderId) {
+      try {
+        const measResult = await queryDatabase(DB.measurement, {
+          property: "訂單",
+          relation: { contains: orderId },
+        });
+        if (measResult.results.length > 0) {
+          const measPage = measResult.results[0];
+          const measText = measPage.properties["量身資料"]?.rich_text?.[0]?.plain_text || "";
+          const measNote = measPage.properties["體型備註"]?.rich_text?.[0]?.plain_text || "";
+          const measBlock = [
+            measText ? `\n\n【量身尺寸】\n${measText}` : "",
+            measNote ? `\n\n【體型備註】\n${measNote}` : "",
+          ].join("");
+          finalContent = finalContent + measBlock;
+        }
+      } catch (e) {
+        console.warn("fetch measurement failed:", e.message);
+      }
+    }
+
     const dispatchProps = {
       "派工單名稱": prop.title(`${orderName} - ${dispatchType}`),
       "訂單": prop.relation(orderId),
@@ -15,7 +39,7 @@ export default async function handler(req, res) {
       "指派師傅": prop.select(tailor),
       "狀態": prop.select("⏳ 待完成"),
       ...(deadline ? { "完成期限": prop.date(deadline) } : {}),
-      ...(content ? { "備註": prop.text(content) } : {}),
+      ...(finalContent ? { "備註": prop.text(finalContent.slice(0, 2000)) } : {}),
     };
 
     const dispatch = await createPage(DB.dispatch, dispatchProps);

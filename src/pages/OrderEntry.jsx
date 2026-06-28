@@ -163,6 +163,62 @@ const MeasRow = ({label, value, onChange, hint}) => (
   </div>
 );
 
+// ─── Photo Upload ─────────────────────────────────────────────────────────────
+function PhotoUpload({ label, photos, onAdd, onRemove }) {
+  const [uploading, setUploading] = useState(false);
+  const [err, setErr] = useState("");
+
+  const handleFile = async (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    setUploading(true); setErr("");
+    for (const file of files) {
+      try {
+        const r = await fetch("/api/upload-image", {
+          method: "POST",
+          headers: { "x-filename": file.name, "content-type": file.type },
+          body: file,
+        });
+        const d = await r.json();
+        if (!d.success) throw new Error(d.error);
+        onAdd(d.url);
+      } catch(ex) { setErr(ex.message); }
+    }
+    setUploading(false);
+    e.target.value = "";
+  };
+
+  return (
+    <div>
+      <Lbl>{label}</Lbl>
+      {photos.length > 0 && (
+        <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:8 }}>
+          {photos.map((url, i) => (
+            <div key={i} style={{ position:"relative", width:72, height:72 }}>
+              <img src={url} alt="" style={{ width:72, height:72, objectFit:"cover", borderRadius:8, border:`1px solid ${C.border}` }} />
+              <button onClick={() => onRemove(i)} style={{
+                position:"absolute", top:-4, right:-4, width:18, height:18,
+                borderRadius:"50%", border:"none", background:C.red, color:"#fff",
+                fontSize:10, fontWeight:700, cursor:"pointer", lineHeight:1, padding:0
+              }}>✕</button>
+            </div>
+          ))}
+        </div>
+      )}
+      <label style={{
+        display:"inline-flex", alignItems:"center", gap:6, padding:"8px 14px",
+        background:C.mid, border:`1px dashed ${C.border}`, borderRadius:8,
+        cursor:"pointer", fontSize:12, color:C.sage,
+      }}>
+        {uploading ? "上傳中..." : "＋ 選擇照片"}
+        <input type="file" accept="image/*" multiple disabled={uploading} onChange={handleFile}
+          style={{ display:"none" }} />
+      </label>
+      {err && <div style={{ fontSize:11, color:C.red, marginTop:4 }}>{err}</div>}
+    </div>
+  );
+}
+
 // ─── Part Style Block ─────────────────────────────────────────────────────────
 function PartBlock({ part, styles, inputs, onToggle, onInput }) {
   const defs = STYLE[part] || [];
@@ -401,6 +457,8 @@ export default function OrderEntry() {
   const [shirtMeas, setShirtMeas] = useState(()=>Object.fromEntries(MEAS_SHIRT[0].fields.map(f=>[f,""])));
   const [traits, setTraits] = useState({});
   const [measNote, setMeasNote] = useState("");
+  const [stylePhotos, setStylePhotos] = useState([]);
+  const [bodyPhotos, setBodyPhotos] = useState([]);
   const [deposit, setDeposit] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState(null);
@@ -419,6 +477,8 @@ export default function OrderEntry() {
         deposit,
         totalActual,
         totalSuggested,
+        stylePhotoUrls: stylePhotos,
+        bodyPhotoUrls: bodyPhotos,
       };
 
       const response = await fetch("/api/create-order", {
@@ -504,6 +564,12 @@ export default function OrderEntry() {
                   {["介紹","自來","社群","網頁","其他"].map(s=><Chip key={s} label={s} active={customer.source===s} onClick={()=>setCustomer(p=>({...p,source:s}))} />)}
                 </div>
               </div>
+              <PhotoUpload
+                label="款式參考圖（客戶提供）"
+                photos={stylePhotos}
+                onAdd={url => setStylePhotos(p=>[...p, url])}
+                onRemove={i => setStylePhotos(p=>p.filter((_,j)=>j!==i))}
+              />
             </div>
           </Sec>
         )}
@@ -613,6 +679,14 @@ export default function OrderEntry() {
                 </div>
               </Sec>
             )}
+            <Sec title="📸 身材照片">
+              <PhotoUpload
+                label="上傳客戶身材照"
+                photos={bodyPhotos}
+                onAdd={url => setBodyPhotos(p=>[...p, url])}
+                onRemove={i => setBodyPhotos(p=>p.filter((_,j)=>j!==i))}
+              />
+            </Sec>
           </>
         )}
 

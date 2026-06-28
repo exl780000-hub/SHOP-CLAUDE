@@ -7,7 +7,7 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ success: false, error: "Method not allowed" });
 
   try {
-    const { customer, cards, measurements, shirtMeasurements, measNote, deposit, totalActual, totalSuggested } = req.body;
+    const { customer, cards, measurements, shirtMeasurements, measNote, deposit, totalActual, totalSuggested, stylePhotoUrls, bodyPhotoUrls } = req.body;
 
     // 1. 找/建客戶
     let customerId = null;
@@ -60,6 +60,8 @@ export default async function handler(req, res) {
       "褲子樣式": prop.text(styleTexts.褲子樣式),
       "背心樣式": prop.text(styleTexts.背心樣式),
       "襯衫樣式": prop.text(styleTexts.襯衫樣式),
+      ...(stylePhotoUrls?.length ? { "款式參考圖": prop.text(stylePhotoUrls.join("\n")) } : {}),
+      ...(bodyPhotoUrls?.length ? { "身材照片": prop.text(bodyPhotoUrls.join("\n")) } : {}),
     };
     const order = await createPage(DB.order, orderProps);
 
