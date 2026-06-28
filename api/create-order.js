@@ -52,6 +52,7 @@ export default async function handler(req, res) {
       "尾款": prop.number(totalActual - (Number(deposit) || 0)),
       "外套工資": prop.number(wages.jacket),
       "褲子工資": prop.number(wages.trouser),
+      "背心工資": prop.number(wages.vest),
       "經理費": prop.number(wages.manager),
       "師傅工資合計": prop.number(wages.total),
       "卡片數量": prop.number(cards.length),
@@ -72,7 +73,7 @@ export default async function handler(req, res) {
         "訂單": prop.relation(order.id),
         "量身日期": prop.date(today),
       };
-      const fields = ["領圍","胸圍","腰圍","臀圍","肩寬","半肩寬","袖長","前胸寬","後背寬","前身長","後身長","後領寬","褲腰","褲長","前檔長","下檔長","大腿圍","小腿圍","腳踝圍","背心長","上臂圍","下臂圍"];
+      const fields = ["領圍","胸圍","腰圍","臀圍","肩寬","半肩寬","袖長","前胸寬","後背寬","前身長","後身長","後領寬","褲腰","褲長","前檔長","下檔長","大腿圍","小腿圍","腳踝圍","背心長","上臂圍","下臂圍","手腕圍"];
       fields.forEach(f => {
         if (measurements[f]) measProps[f] = prop.number(parseFloat(measurements[f]));
       });

@@ -12,7 +12,7 @@ const GONGBEN = {
   "三件式":  { 副料:1700, 外套工資:8500, 褲工資:1900, 背心工資:1900, 版型:5800, 縫試穿:1850, 內裡:500, 鈕扣:500, 運費:600, 經理費:2400, 公司費:9800 },
   "外套":    { 副料:1500, 外套工資:8500, 版型:3200, 縫試穿:1150, 內裡:300, 鈕扣:500, 運費:200, 經理費:1600, 公司費:7350 },
   "褲子":    { 副料:500, 褲工資:1900, 版型:1300, 縫試穿:350, 內裡:100, 扣子:100, 運費:200, 經理費:400, 公司費:2450 },
-  "背心":    { 副料:200, 背心工資:1900, 內裡:200, 運費:200 },
+  "背心":    { 副料:300, 背心工資:1900, 版型:1300, 縫試穿:350, 內裡:200, 扣子:200, 運費:200, 經理費:400, 公司費:2450 },
   "襯衫":    { 工資:800, 運費:400, 經理費:200 },
 };
 const DEF_YARDS = { "二件式":3.2, "三件式":4.0, "外套":2.5, "褲子":1.4, "背心":1.0, "襯衫":1.7 };
@@ -57,7 +57,8 @@ const STYLE = {
     { cat:"開衩", opts:["無衩","單衩","雙衩"] },
     { cat:"袖口", opts:["疊釦","平釦"], input:{ key:"袖口扣數", label:"扣數" } },
     { cat:"眼型", opts:["真衩真眼","米蘭眼"], multi:true, defaults:["真衩真眼"] },
-    { cat:"特殊", opts:["跳色"], multi:true },
+    { cat:"工藝加項", opts:["票帶","半裡","全單","大衣"], multi:true },
+    { cat:"特殊", opts:["跳色"], multi:true, input:{ key:"特殊工資", label:"特殊工資$" } },
   ],
   褲子: [
     { cat:"褶型", opts:["無褶","反一褶","反二褶","正一褶","正二褶"] },
@@ -65,6 +66,7 @@ const STYLE = {
     { cat:"口袋", opts:["斜口袋","直口袋","L袋"] },
     { cat:"長度", opts:["正式長","切平口","九分"] },
     { cat:"腰頭", opts:["皮帶腰","甩腰頭","調整扣"], input:{ key:"腰頭扣數", label:"甩腰頭扣數" } },
+    { cat:"特殊", opts:[], input:{ key:"特殊工資", label:"特殊工資$" } },
   ],
   背心: [
     { cat:"領型", opts:["劍領","平領","無領","絲瓜領"] },
@@ -147,6 +149,18 @@ const NumIn = ({label, value, onChange, unit="in"}) => (
       <input type="number" value={value} onChange={e=>onChange(e.target.value)}
         style={{width:"100%", background:C.mid, border:`1px solid ${C.border}`, borderRadius:6, padding:"6px 6px", color:C.ivory, fontSize:12, outline:"none", boxSizing:"border-box", textAlign:"center"}} />
       <span style={{fontSize:9, color:C.sage, whiteSpace:"nowrap"}}>{unit}</span>
+    </div>
+  </div>
+);
+const MeasRow = ({label, value, onChange, hint}) => (
+  <div style={{display:"flex", alignItems:"center", borderBottom:`1px solid ${C.border}44`, padding:"6px 0"}}>
+    <div style={{width:80, fontSize:13, color:C.ivory, flexShrink:0}}>{label}</div>
+    <div style={{flex:1, display:"flex", alignItems:"center", gap:6}}>
+      <input type="number" value={value} onChange={e=>onChange(e.target.value)}
+        placeholder="—"
+        style={{width:72, background:C.mid, border:`1px solid ${C.border}`, borderRadius:6, padding:"5px 8px", color:C.gold, fontSize:14, outline:"none", textAlign:"center", fontFamily:"Georgia,serif"}} />
+      <span style={{fontSize:11, color:C.sage}}>英吋</span>
+      {hint && <span style={{fontSize:10, color:C.border, marginLeft:2}}>{hint}</span>}
     </div>
   </div>
 );
@@ -549,18 +563,14 @@ export default function OrderEntry() {
         {step===2 && (
           <>
             {hasSuit && MEAS_SUIT.map(({group,fields})=>(
-              <Sec key={group} title={`📐 ${group}（英吋）`}>
-                <div style={{display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10}}>
-                  {fields.map(f=><NumIn key={f} label={f} value={meas[f]} onChange={v=>setMeas(p=>({...p,[f]:v}))} />)}
-                </div>
+              <Sec key={group} title={`📐 ${group}`}>
+                {fields.map(f=><MeasRow key={f} label={f} value={meas[f]||""} onChange={v=>setMeas(p=>({...p,[f]:v}))} />)}
               </Sec>
             ))}
 
             {hasShirt && (
-              <Sec title="👕 襯衫尺寸（英吋）">
-                <div style={{display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10}}>
-                  {MEAS_SHIRT[0].fields.map(f=><NumIn key={f} label={f} value={shirtMeas[f]} onChange={v=>setShirtMeas(p=>({...p,[f]:v}))} />)}
-                </div>
+              <Sec title="👕 襯衫尺寸">
+                {MEAS_SHIRT[0].fields.map(f=><MeasRow key={f} label={f} value={shirtMeas[f]||""} onChange={v=>setShirtMeas(p=>({...p,[f]:v}))} />)}
               </Sec>
             )}
 
@@ -672,7 +682,7 @@ export default function OrderEntry() {
       </div>
 
       {/* Bottom Nav */}
-      <div style={{position:"fixed", bottom:62, left:0, right:0, background:C.card, borderTop:`1px solid ${C.border}`, padding:"12px 14px", display:"flex", gap:10, maxWidth:520, margin:"0 auto", left:"50%", transform:"translateX(-50%)", width:"100%", boxSizing:"border-box"}}>
+      <div style={{position:"fixed", bottom:62, right:0, background:C.card, borderTop:`1px solid ${C.border}`, padding:"12px 14px", display:"flex", gap:10, maxWidth:520, margin:"0 auto", left:"50%", transform:"translateX(-50%)", width:"100%", boxSizing:"border-box"}}>
         {step>0 && (
           <button onClick={()=>setStep(p=>p-1)} style={{flex:1, padding:"12px", borderRadius:10, border:`1px solid ${C.border}`, background:"transparent", color:C.sage, fontSize:14, fontWeight:700, cursor:"pointer"}}>← 上一步</button>
         )}
