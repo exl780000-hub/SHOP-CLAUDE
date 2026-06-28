@@ -17,6 +17,7 @@ function formatPart(card, part) {
     "排扣扣數": "扣", "領寬": "領寬", "袖口扣數": "袖扣",
     "腰頭扣數": "甩腰扣", "背心排扣扣數": "扣",
     "克夫寬": "克夫", "袖扣數": "袖扣", "袖深加深": "袖深",
+    "特殊工資": "特殊工資$",
   };
   for (const [key, val] of Object.entries(inputs)) {
     if (val) segments.push(`${inputLabels[key] || key}${val}`);
@@ -57,22 +58,49 @@ export function buildStyleTexts(cards) {
   };
 }
 
-// 工資計算
+// 工資計算（論件，完成後可手動微調）
 export function calcWages(cards) {
-  const jacket = cards.reduce((s, c) => {
-    if (!["二件式", "三件式", "外套"].includes(c.type)) return s;
-    const ps = (c.partStyles && c.partStyles["外套"]) || {};
-    let w = 7000;
-    if ((ps["排扣"] || []).includes("雙排釦")) w += 600;
-    if ((ps["領型"] || []).includes("劍領")) w += 300;
-    if ((ps["眼型"] || []).includes("米蘭眼")) w += 100;
-    return s + w;
-  }, 0);
-  const trouser = cards.reduce((s, c) =>
-    ["二件式", "三件式", "褲子"].includes(c.type) ? s + 1900 : s, 0);
-  const manager = cards.reduce((s, c) => {
-    const m = { "二件式": 2000, "三件式": 2400, "外套": 1600, "褲子": 400, "背心": 0, "襯衫": 200 };
-    return s + (m[c.type] || 0);
-  }, 0);
-  return { jacket, trouser, manager, total: jacket + trouser + manager };
+  const MANAGER_FEE = { "二件式": 2000, "三件式": 2400, "外套": 1600, "褲子": 400, "背心": 0, "襯衫": 200 };
+  const PATTERN_FEE = { "二件式": 4500, "三件式": 5800, "外套": 3200, "褲子": 1300, "背心": 0, "襯衫": 0 };
+
+  let jacket = 0, trouser = 0, vest = 0, manager = 0;
+
+  cards.forEach(c => {
+    const ps  = (c.partStyles?.["外套"]) || {};
+    const pi  = (c.partInputs?.["外套"])  || {};
+    const pti = (c.partInputs?.["褲子"])  || {};
+    const pvs = (c.partStyles?.["背心"]) || {};
+
+    // 外套師傅工資
+    if (["二件式", "三件式", "外套"].includes(c.type)) {
+      let w = 7000;
+      const btnCount = parseInt(pi["排扣扣數"]) || 0;
+      if (btnCount > 0) w += btnCount * 80;                             // 扣眼 80/顆
+      if ((ps["排扣"] || []).includes("雙排釦")) w += 600;              // 雙排
+      if ((ps["眼型"] || []).includes("米蘭眼") && btnCount > 0)
+        w += btnCount * 100;                                            // 米蘭眼 100/顆
+      if ((ps["工藝加項"] || []).includes("票帶")) w += 100;
+      if ((ps["領型"] || []).includes("劍領")) w += 300;
+      if ((ps["工藝加項"] || []).includes("半裡")) w += 300;
+      if ((ps["工藝加項"] || []).includes("全單")) w += 600;
+      if ((ps["工藝加項"] || []).includes("大衣")) w += 1500;
+      w += parseInt(pi["特殊工資"]) || 0;
+      jacket += w;
+    }
+
+    // 褲子師傅工資
+    if (["二件式", "三件式", "褲子"].includes(c.type)) {
+      trouser += 1900 + (parseInt(pti["特殊工資"]) || 0);
+    }
+
+    // 背心工資（預設褲子師傅 1900；外套師傅單排 2200/雙排 2500）
+    if (["三件式", "背心"].includes(c.type)) {
+      vest += (pvs["排扣"] || []).includes("雙排釦") ? 2500 : 1900;
+    }
+
+    // 經理費 + 打板費（同一人）
+    manager += (MANAGER_FEE[c.type] || 0) + (PATTERN_FEE[c.type] || 0);
+  });
+
+  return { jacket, trouser, vest, manager, total: jacket + trouser + vest + manager };
 }

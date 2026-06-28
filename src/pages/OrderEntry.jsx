@@ -57,7 +57,8 @@ const STYLE = {
     { cat:"開衩", opts:["無衩","單衩","雙衩"] },
     { cat:"袖口", opts:["疊釦","平釦"], input:{ key:"袖口扣數", label:"扣數" } },
     { cat:"眼型", opts:["真衩真眼","米蘭眼"], multi:true, defaults:["真衩真眼"] },
-    { cat:"特殊", opts:["跳色"], multi:true },
+    { cat:"工藝加項", opts:["票帶","半裡","全單","大衣"], multi:true },
+    { cat:"特殊", opts:["跳色"], multi:true, input:{ key:"特殊工資", label:"特殊工資$" } },
   ],
   褲子: [
     { cat:"褶型", opts:["無褶","反一褶","反二褶","正一褶","正二褶"] },
@@ -65,6 +66,7 @@ const STYLE = {
     { cat:"口袋", opts:["斜口袋","直口袋","L袋"] },
     { cat:"長度", opts:["正式長","切平口","九分"] },
     { cat:"腰頭", opts:["皮帶腰","甩腰頭","調整扣"], input:{ key:"腰頭扣數", label:"甩腰頭扣數" } },
+    { cat:"特殊", opts:[], input:{ key:"特殊工資", label:"特殊工資$" } },
   ],
   背心: [
     { cat:"領型", opts:["劍領","平領","無領","絲瓜領"] },

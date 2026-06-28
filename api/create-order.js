@@ -52,6 +52,7 @@ export default async function handler(req, res) {
       "尾款": prop.number(totalActual - (Number(deposit) || 0)),
       "外套工資": prop.number(wages.jacket),
       "褲子工資": prop.number(wages.trouser),
+      "背心工資": prop.number(wages.vest),
       "經理費": prop.number(wages.manager),
       "師傅工資合計": prop.number(wages.total),
       "卡片數量": prop.number(cards.length),
