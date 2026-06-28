@@ -72,7 +72,7 @@ export default async function handler(req, res) {
         "訂單": prop.relation(order.id),
         "量身日期": prop.date(today),
       };
-      const fields = ["領圍","胸圍","腰圍","臀圍","肩寬","半肩寬","袖長","前胸寬","後背寬","前身長","後身長","後領寬","褲腰","褲長","前檔長","下檔長","大腿圍","小腿圍","腳踝圍","背心長","上臂圍","下臂圍"];
+      const fields = ["領圍","胸圍","腰圍","臀圍","肩寬","半肩寬","袖長","前胸寬","後背寬","前身長","後身長","後領寬","褲腰","褲長","前檔長","下檔長","大腿圍","小腿圍","腳踝圍","背心長","上臂圍","下臂圍","手腕圍"];
       fields.forEach(f => {
         if (measurements[f]) measProps[f] = prop.number(parseFloat(measurements[f]));
       });
