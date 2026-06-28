@@ -152,6 +152,18 @@ const NumIn = ({label, value, onChange, unit="in"}) => (
     </div>
   </div>
 );
+const MeasRow = ({label, value, onChange, hint}) => (
+  <div style={{display:"flex", alignItems:"center", borderBottom:`1px solid ${C.border}44`, padding:"6px 0"}}>
+    <div style={{width:80, fontSize:13, color:C.ivory, flexShrink:0}}>{label}</div>
+    <div style={{flex:1, display:"flex", alignItems:"center", gap:6}}>
+      <input type="number" value={value} onChange={e=>onChange(e.target.value)}
+        placeholder="—"
+        style={{width:72, background:C.mid, border:`1px solid ${C.border}`, borderRadius:6, padding:"5px 8px", color:C.gold, fontSize:14, outline:"none", textAlign:"center", fontFamily:"Georgia,serif"}} />
+      <span style={{fontSize:11, color:C.sage}}>英吋</span>
+      {hint && <span style={{fontSize:10, color:C.border, marginLeft:2}}>{hint}</span>}
+    </div>
+  </div>
+);
 
 // ─── Part Style Block ─────────────────────────────────────────────────────────
 function PartBlock({ part, styles, inputs, onToggle, onInput }) {
@@ -551,18 +563,14 @@ export default function OrderEntry() {
         {step===2 && (
           <>
             {hasSuit && MEAS_SUIT.map(({group,fields})=>(
-              <Sec key={group} title={`📐 ${group}（英吋）`}>
-                <div style={{display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10}}>
-                  {fields.map(f=><NumIn key={f} label={f} value={meas[f]} onChange={v=>setMeas(p=>({...p,[f]:v}))} />)}
-                </div>
+              <Sec key={group} title={`📐 ${group}`}>
+                {fields.map(f=><MeasRow key={f} label={f} value={meas[f]||""} onChange={v=>setMeas(p=>({...p,[f]:v}))} />)}
               </Sec>
             ))}
 
             {hasShirt && (
-              <Sec title="👕 襯衫尺寸（英吋）">
-                <div style={{display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10}}>
-                  {MEAS_SHIRT[0].fields.map(f=><NumIn key={f} label={f} value={shirtMeas[f]} onChange={v=>setShirtMeas(p=>({...p,[f]:v}))} />)}
-                </div>
+              <Sec title="👕 襯衫尺寸">
+                {MEAS_SHIRT[0].fields.map(f=><MeasRow key={f} label={f} value={shirtMeas[f]||""} onChange={v=>setShirtMeas(p=>({...p,[f]:v}))} />)}
               </Sec>
             )}
 
