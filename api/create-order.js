@@ -66,16 +66,15 @@ export default async function handler(req, res) {
     // 5. 量身（西裝）
     const hasMeas = measurements && Object.values(measurements).some(v => v !== "" && v != null);
     if (hasMeas) {
+      const fields = ["領圍","胸圍","腰圍","臀圍","肩寬","半肩寬","袖長","前胸寬","後背寬","前身長","後身長","後領寬","褲腰","褲長","前檔長","下檔長","大腿圍","小腿圍","腳踝圍","背心長","上臂圍","下臂圍","手腕圍"];
+      const measText = fields.filter(f => measurements[f]).map(f => `${f}: ${measurements[f]}`).join("　");
       const measProps = {
         "量身名稱": prop.title(`${customer.name} - ${today}`),
         "客戶": prop.relation(customerId),
         "訂單": prop.relation(order.id),
         "量身日期": prop.date(today),
+        "量身資料": prop.text(measText),
       };
-      const fields = ["領圍","胸圍","腰圍","臀圍","肩寬","半肩寬","袖長","前胸寬","後背寬","前身長","後身長","後領寬","褲腰","褲長","前檔長","下檔長","大腿圍","小腿圍","腳踝圍","背心長","上臂圍","下臂圍","手腕圍"];
-      fields.forEach(f => {
-        if (measurements[f]) measProps[f] = prop.number(parseFloat(measurements[f]));
-      });
       if (measNote) measProps["體型備註"] = prop.text(measNote);
       await createPage(DB.measurement, measProps);
     }
