@@ -66,8 +66,15 @@ export default async function handler(req, res) {
     // 5. 量身（西裝）
     const hasMeas = measurements && Object.values(measurements).some(v => v !== "" && v != null);
     if (hasMeas) {
-      const fields = ["領圍","胸圍","腰圍","臀圍","肩寬","半肩寬","袖長","前胸寬","後背寬","前身長","後身長","後領寬","褲腰","褲長","前檔長","下檔長","大腿圍","小腿圍","腳踝圍","背心長","上臂圍","下臂圍","手腕圍"];
-      const measText = fields.filter(f => measurements[f]).map(f => `${f}: ${measurements[f]}`).join("　");
+      const MEAS_GROUPS = [
+        { label: "【上身】", fields: ["領圍","胸圍","腰圍","臀圍","肩寬","半肩寬","前胸寬","後背寬","上臂圍","下臂圍","手腕圍"] },
+        { label: "【長度】", fields: ["袖長","前身長","後身長","後領寬","背心長"] },
+        { label: "【下身】", fields: ["褲腰","褲長","前檔長","下檔長","大腿圍","小腿圍","腳踝圍"] },
+      ];
+      const measText = MEAS_GROUPS.map(g => {
+        const lines = g.fields.filter(f => measurements[f]).map(f => `  ${f.padEnd(4, "　")}${measurements[f]} in`);
+        return lines.length ? `${g.label}\n${lines.join("\n")}` : "";
+      }).filter(Boolean).join("\n");
       const measProps = {
         "量身名稱": prop.title(`${customer.name} - ${today}`),
         "客戶": prop.relation(customerId),
