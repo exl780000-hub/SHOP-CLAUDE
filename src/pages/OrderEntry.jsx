@@ -52,37 +52,35 @@ function calcCard(card) {
 const STYLE = {
   外套: [
     { cat:"鬆度", opts:["稍窄","合身","寬鬆"] },
-    { cat:"排扣", opts:["單排釦","雙排釦"], input:{ key:"排扣扣數", label:"扣數" } },
-    { cat:"領型", opts:["劍領","平領"], input:{ key:"領寬", label:"領寬" } },
+    { cat:"排扣", opts:["單排釦","雙排釦"], input:{ key:"排扣扣數", label:"扣數", type:"number" } },
+    { cat:"領型", opts:["劍領","平領"], input:{ key:"領寬", label:"領寬", type:"number" } },
     { cat:"開衩", opts:["無衩","單衩","雙衩"] },
-    { cat:"袖口", opts:["疊釦","平釦"], input:{ key:"袖口扣數", label:"扣數" } },
+    { cat:"袖口", opts:["疊釦","平釦"], input:{ key:"袖口扣數", label:"扣數", type:"number" } },
     { cat:"眼型", opts:["真衩真眼","米蘭眼"], multi:true, defaults:["真衩真眼"] },
-    { cat:"工藝加項", opts:["票帶","半裡","全單","大衣"], multi:true },
-    { cat:"特殊", opts:["跳色"], multi:true, input:{ key:"特殊工資", label:"特殊工資$" } },
+    { cat:"特殊", opts:["跳色","票帶","半裡","全單","大衣"], multi:true },
   ],
   褲子: [
     { cat:"褶型", opts:["無褶","反一褶","反二褶","正一褶","正二褶"] },
     { cat:"褲腳", opts:["平口","褲腳反褶"] },
     { cat:"口袋", opts:["斜口袋","直口袋","L袋"] },
     { cat:"長度", opts:["正式長","切平口","九分"] },
-    { cat:"腰頭", opts:["皮帶腰","甩腰頭","調整扣"], input:{ key:"腰頭扣數", label:"甩腰頭扣數" } },
-    { cat:"特殊", opts:[], input:{ key:"特殊工資", label:"特殊工資$" } },
+    { cat:"腰頭", opts:["皮帶腰","甩腰頭","調整扣"], input:{ key:"腰頭扣數", label:"甩腰頭扣數", type:"number" } },
   ],
   背心: [
     { cat:"領型", opts:["劍領","平領","無領","絲瓜領"] },
-    { cat:"排扣", opts:["單排釦","雙排釦"], input:{ key:"背心排扣扣數", label:"扣數" } },
+    { cat:"排扣", opts:["單排釦","雙排釦"], input:{ key:"背心排扣扣數", label:"扣數", type:"number" } },
     { cat:"口袋", opts:["雙開","方袋"] },
     { cat:"胸袋", opts:["有胸袋","無胸袋"] },
     { cat:"調整", opts:["調整袋","無調整"] },
   ],
   襯衫: [
-    { cat:"領型", opts:["一字領","大外八","中外八","標準領"], input:{ key:"領寬", label:"領寬" } },
+    { cat:"領型", opts:["一字領","大外八","中外八","標準領"], input:{ key:"領寬", label:"領寬", type:"number" } },
     { cat:"領扣", opts:["明扣領","暗扣領","自訂領型"] },
     { cat:"領襯", opts:["軟襯","硬襯"] },
     { cat:"領選", opts:["全包","背有腰線"], multi:true, defaults:["全包","背有腰線"] },
-    { cat:"袖型", opts:["一般圓角","大刀圓","切角","雙克夫"], input:{ key:"克夫寬", label:"克夫寬" } },
-    { cat:"袖扣", opts:[], input:{ key:"袖扣數", label:"扣子數" } },
-    { cat:"袖深", opts:[], input:{ key:"袖深加深", label:"袖深加深" } },
+    { cat:"袖型", opts:["一般圓角","大刀圓","切角","雙克夫"], input:{ key:"克夫寬", label:"克夫寬", type:"number" } },
+    { cat:"袖扣", opts:[], input:{ key:"袖扣數", label:"扣子數", type:"number" } },
+    { cat:"袖深", opts:[], input:{ key:"袖深加深", label:"袖深加深", type:"number" } },
     { cat:"門襟", opts:["有門襟","無門襟"] },
     { cat:"口袋", opts:["有口袋","無口袋"] },
     { cat:"手錶位", opts:["左手錶","右手錶"] },
@@ -192,8 +190,8 @@ function PartBlock({ part, styles, inputs, onToggle, onInput }) {
               {input && (
                 <div style={{display:"flex", alignItems:"center", gap:5, marginLeft:hasOpts?4:0}}>
                   <span style={{fontSize:11, color:C.sage, whiteSpace:"nowrap"}}>{input.label}：</span>
-                  <input type="text" value={inputs[input.key]||""} onChange={e=>onInput(input.key,e.target.value)}
-                    placeholder="—"
+                  <input type={input.type||"text"} value={inputs[input.key]||""} onChange={e=>onInput(input.key,e.target.value)}
+                    placeholder="—" inputMode={input.type==="number"?"numeric":undefined}
                     style={{width:65, background:C.mid, border:`1px solid ${color}66`, borderRadius:6, padding:"5px 8px", color:C.ivory, fontSize:12, outline:"none"}} />
                 </div>
               )}
@@ -281,9 +279,21 @@ function CardBlock({ card, cardIndex, onUpdate, onRemove }) {
               onChange={v=>onUpdate({...card,yards:v})} placeholder={String(DEF_YARDS[card.type])} style={{flex:1}} />
           </div>
           {fabricTotal>0 && (
-            <div style={{fontSize:12, color:C.sage}}>
+            <div style={{fontSize:12, color:C.sage, marginBottom:6}}>
               布料總價：<span style={{color:color, fontWeight:700, fontFamily:"Georgia,serif"}}>${fabricTotal.toLocaleString()}</span>
               <span style={{fontSize:11, marginLeft:6}}>{card.ppy} × {card.yards||DEF_YARDS[card.type]} 碼</span>
+            </div>
+          )}
+          {fabricTotal>0 && (
+            <div style={{display:"flex", gap:8, marginTop:4}}>
+              <div style={{flex:1, background:C.card, borderRadius:8, padding:"8px 10px", textAlign:"center"}}>
+                <div style={{fontSize:9, color:C.sage, marginBottom:2}}>建議售價</div>
+                <div style={{fontSize:15, fontWeight:700, color:C.gold, fontFamily:"Georgia,serif"}}>${calcCard(card).suggested.toLocaleString()}</div>
+              </div>
+              <div style={{flex:1, background:C.card, borderRadius:8, padding:"8px 10px", textAlign:"center"}}>
+                <div style={{fontSize:9, color:C.sage, marginBottom:2}}>利潤率</div>
+                <div style={{fontSize:15, fontWeight:700, color:C.green}}>{(calcCard(card).pr*100).toFixed(0)}%</div>
+              </div>
             </div>
           )}
         </div>
