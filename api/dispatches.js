@@ -5,10 +5,14 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
 
   try {
-    const tailor = req.query.tailor || "";
-    const filter = tailor
-      ? { property: "指派師傅", select: { equals: tailor } }
-      : undefined;
+    const tailor  = req.query.tailor  || "";
+    const orderId = req.query.orderId || "";
+    let filter;
+    if (orderId) {
+      filter = { property: "訂單", relation: { contains: orderId } };
+    } else if (tailor) {
+      filter = { property: "指派師傅", select: { equals: tailor } };
+    }
     const data = await queryDatabase(DB.dispatch, filter);
     const records = data.results.map(p => {
       const props = p.properties;
