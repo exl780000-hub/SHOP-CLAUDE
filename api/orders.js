@@ -36,7 +36,6 @@ export default async function handler(req, res) {
         deposit: getText("訂金"),
         jacketWage: getText("外套工資"),
         trouserWage: getText("褲子工資"),
-        vestWage: getText("背心工資"),
         managerFee: getText("經理費"),
         totalWage: getText("師傅工資合計"),
         jacketStyle: getText("外套樣式"),

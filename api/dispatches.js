@@ -5,7 +5,11 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
 
   try {
-    const data = await queryDatabase(DB.dispatch);
+    const tailor = req.query.tailor || "";
+    const filter = tailor
+      ? { property: "指派師傅", select: { equals: tailor } }
+      : undefined;
+    const data = await queryDatabase(DB.dispatch, filter);
     const records = data.results.map(p => {
       const props = p.properties;
       const get = (f) => {

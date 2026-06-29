@@ -113,9 +113,10 @@ function OrderWage({ order, onSaved }) {
 export default function Wages() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [dispatchedOrderIds, setDispatchedOrderIds] = useState(null); // null = 全部不過濾
 
   // 時間篩選
-  const [timeMode, setTimeMode] = useState("month"); // "month" | "custom"
+  const [timeMode, setTimeMode] = useState("month");
   const [selectedMonth, setSelectedMonth] = useState(monthStr(0));
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
@@ -123,17 +124,40 @@ export default function Wages() {
   // 師傅篩選
   const [tailor, setTailor] = useState("全部");
 
-  const load = async () => {
-    setLoading(true);
+  const loadOrders = async () => {
     try {
       const r = await fetch("/api/orders?q=");
       const d = await r.json();
       setOrders(d.orders || []);
     } catch (e) { console.error(e); }
-    setLoading(false);
   };
 
-  useEffect(() => { load(); }, []);
+  // 依師傅篩選時，從派工記錄取得有派工的訂單 ID
+  const loadDispatchedIds = async (selectedTailor) => {
+    if (selectedTailor === "全部") {
+      setDispatchedOrderIds(null);
+      return;
+    }
+    try {
+      const r = await fetch(`/api/dispatches?tailor=${encodeURIComponent(selectedTailor)}`);
+      const d = await r.json();
+      const ids = new Set((d.dispatches || []).flatMap(dp => dp.orderRel || []));
+      setDispatchedOrderIds(ids);
+    } catch (e) {
+      console.error(e);
+      setDispatchedOrderIds(null);
+    }
+  };
+
+  useEffect(() => {
+    setLoading(true);
+    Promise.all([loadOrders(), loadDispatchedIds(tailor)]).finally(() => setLoading(false));
+  }, []);
+
+  const handleTailorChange = async (t) => {
+    setTailor(t);
+    await loadDispatchedIds(t);
+  };
 
   const handleSaved = (orderId, updated) => {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updated } : o));
@@ -142,9 +166,7 @@ export default function Wages() {
   // 時間過濾
   const inRange = (dateStr) => {
     if (!dateStr) return false;
-    if (timeMode === "month") {
-      return dateStr.startsWith(selectedMonth);
-    }
+    if (timeMode === "month") return dateStr.startsWith(selectedMonth);
     if (timeMode === "custom") {
       if (!customStart && !customEnd) return true;
       if (customStart && dateStr < customStart) return false;
@@ -154,22 +176,11 @@ export default function Wages() {
     return true;
   };
 
-  // 師傅過濾
-  const matchesTailor = (o) => {
-    if (tailor === "全部") return true;
-    if (tailor === "外套師傅") {
-      return (o.jacketWage || 0) > 0 ||
-        o.items?.includes("外套") || o.items?.includes("二件式") || o.items?.includes("三件式");
-    }
-    if (tailor === "褲子師傅") {
-      return (o.trouserWage || 0) > 0 ||
-        o.items?.includes("褲子") || o.items?.includes("二件式") || o.items?.includes("三件式");
-    }
-    if (tailor === "經理") return true; // 每筆都有經理費
+  const filtered = orders.filter(o => {
+    if (!inRange(o.date)) return false;
+    if (dispatchedOrderIds !== null && !dispatchedOrderIds.has(o.id)) return false;
     return true;
-  };
-
-  const filtered = orders.filter(o => inRange(o.date) && matchesTailor(o));
+  });
 
   // 依師傅算合計
   const sumJacket  = filtered.reduce((s, o) => s + (o.jacketWage  || 0), 0);
@@ -235,7 +246,7 @@ export default function Wages() {
       {/* ── 師傅篩選 ── */}
       <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
         {TAILORS.map(t => (
-          <button key={t} onClick={() => setTailor(t)} style={{
+          <button key={t} onClick={() => handleTailorChange(t)} style={{
             cursor: "pointer", borderRadius: 8, fontSize: 13, fontWeight: 600, padding: "8px 14px",
             border: `1px solid ${tailor === t ? C.gold : C.border}`,
             background: tailor === t ? C.gold + "22" : "transparent",
