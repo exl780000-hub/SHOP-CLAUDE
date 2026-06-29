@@ -38,6 +38,8 @@ export default function Orders() {
   const [measurement, setMeasurement] = useState({});   // { [orderId]: { data, note } | null }
   const [loadingMeas, setLoadingMeas] = useState({});
   const [updatingFlow, setUpdatingFlow] = useState(null);
+  const [collectingBalance, setCollectingBalance] = useState(null);
+  const [collectedIds, setCollectedIds] = useState(new Set());
   const [toast, setToast] = useState(null);
 
   const load = async (q = "") => {
@@ -91,6 +93,23 @@ export default function Orders() {
       showToast("更新失敗：" + e.message, false);
     }
     setUpdatingFlow(null);
+  };
+
+  const collectBalance = async (orderId) => {
+    setCollectingBalance(orderId);
+    try {
+      const r = await fetch("/api/collect-balance", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId }),
+      });
+      const d = await r.json();
+      if (!d.success) throw new Error(d.error);
+      setCollectedIds(prev => new Set([...prev, orderId]));
+      showToast("✅ 尾款已標記為已收");
+    } catch (e) {
+      showToast("失敗：" + e.message, false);
+    }
+    setCollectingBalance(null);
   };
 
   const doSearch = () => load(search);
@@ -222,7 +241,7 @@ export default function Orders() {
                 {o.actualPrice ? (
                   <div style={{ marginBottom: 14, padding: "10px 12px", background: C.mid, borderRadius: 8 }}>
                     <div style={{ fontSize: 11, color: C.gold, fontWeight: 700, marginBottom: 8 }}>💰 金額</div>
-                    <div style={{ display: "flex", gap: 8 }}>
+                    <div style={{ display: "flex", gap: 8, marginBottom: balance > 0 ? 10 : 0 }}>
                       <div style={{ flex: 1, textAlign: "center" }}>
                         <div style={{ fontSize: 10, color: C.sage, marginBottom: 2 }}>實際售價</div>
                         <div style={{ fontSize: 15, fontWeight: 700, color: C.gold, fontFamily: "Georgia,serif" }}>${Number(o.actualPrice).toLocaleString()}</div>
@@ -236,6 +255,17 @@ export default function Orders() {
                         <div style={{ fontSize: 15, fontWeight: 700, color: balance > 0 ? C.green : C.sage, fontFamily: "Georgia,serif" }}>${Number(balance).toLocaleString()}</div>
                       </div>
                     </div>
+                    {balance > 0 && !collectedIds.has(o.id) && (
+                      <button onClick={() => collectBalance(o.id)} disabled={collectingBalance === o.id}
+                        style={{ width: "100%", padding: "8px", borderRadius: 8, border: "none",
+                          background: collectingBalance === o.id ? C.border : C.green,
+                          color: "#fff", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                        {collectingBalance === o.id ? "處理中..." : `💵 收尾款 $${Number(balance).toLocaleString()}`}
+                      </button>
+                    )}
+                    {collectedIds.has(o.id) && (
+                      <div style={{ textAlign: "center", fontSize: 12, color: C.green, fontWeight: 700 }}>✅ 尾款已收</div>
+                    )}
                   </div>
                 ) : null}
 
