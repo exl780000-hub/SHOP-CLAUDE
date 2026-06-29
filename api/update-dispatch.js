@@ -2,10 +2,10 @@ import { DB, queryDatabase, updatePage, prop, cors } from "./_notion.js";
 
 // 當某一組派工單全部完成，自動推進訂單至對應流程
 const FLOW_GROUPS = [
-  { types: ["📐 打版單"],                                        target: "🪡 毛胚" },
-  { types: ["🧵 毛胚製作單"],                                    target: "👔 試穿" },
-  { types: ["👔 外套製作單", "👖 褲子製作單", "🦺 背心製作單"], target: "🔧 修改" },
-  { types: ["✂️ 外套修改單", "✂️ 褲子修改單"],                  target: "✅ 完成" },
+  { types: ["📐 打版單"],                                        target: "🪡 製作毛胚" },
+  { types: ["🧵 毛胚製作單"],                                    target: "✂️ 開始製作" }, // 跳過第一次試穿
+  { types: ["👔 外套製作單", "👖 褲子製作單", "🦺 背心製作單"], target: "🧍 第二試身" }, // 待二次試穿
+  { types: ["✂️ 外套修改單", "✂️ 褲子修改單"],                  target: "🎉 完成訂單" }, // 成品製作完成
 ];
 
 export default async function handler(req, res) {

@@ -1,4 +1,15 @@
-import { DB, queryDatabase, createPage, prop, cors } from "./_notion.js";
+import { DB, queryDatabase, createPage, updatePage, prop, cors } from "./_notion.js";
+
+// 建立派工單時對應的訂單流程狀態
+const DISPATCH_FLOW = {
+  "📐 打版單":    "📐 打版",
+  "🧵 毛胚製作單": "🪡 製作毛胚",
+  "👔 外套製作單": "✂️ 開始製作",
+  "👖 褲子製作單": "✂️ 開始製作",
+  "🦺 背心製作單": "✂️ 開始製作",
+  "✂️ 外套修改單": "🪢 最後縫製",
+  "✂️ 褲子修改單": "🪢 最後縫製",
+};
 
 export default async function handler(req, res) {
   cors(res);
@@ -44,10 +55,21 @@ export default async function handler(req, res) {
 
     const dispatch = await createPage(DB.dispatch, dispatchProps);
 
+    // 同步更新訂單流程
+    const flowTarget = DISPATCH_FLOW[dispatchType];
+    if (flowTarget && orderId) {
+      try {
+        await updatePage(orderId, { "流程": prop.select(flowTarget) });
+      } catch (e) {
+        console.warn("update order flow failed:", e.message);
+      }
+    }
+
     return res.status(200).json({
       success: true,
       dispatchId: dispatch.id,
       dispatchUrl: dispatch.url,
+      flowUpdated: flowTarget || null,
       message: "派工單建立成功",
     });
   } catch (err) {
