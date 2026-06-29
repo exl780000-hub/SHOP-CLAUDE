@@ -60,7 +60,7 @@ function ThemePicker() {
   );
 }
 
-// ── 收起側邊欄的圓點按鈕（點擊展開浮層）─────────────────────────────
+// ── 收起側邊欄的圓點按鈕（點擊展開浮層，fixed 定位避免被 overflow:hidden 裁切）──
 function ThemePickerDot() {
   const C = useTheme();
   const { accentKey, bgKey, setAccent, setBg } = useThemeControl();
@@ -69,13 +69,12 @@ function ThemePickerDot() {
   const currentBg     = BG_THEMES.find(t => t.key === bgKey);
 
   return (
-    <div style={{ padding: "10px 0", borderTop: `1px solid ${C.border}`, position: "relative" }}>
+    <div style={{ padding: "10px 0", borderTop: `1px solid ${C.border}` }}>
       <button onClick={() => setOpen(o => !o)} title="主題顏色" style={{
         width: "100%", background: "transparent", border: "none",
         cursor: "pointer", display: "flex", justifyContent: "center",
-        alignItems: "center", gap: 3, padding: "8px 0",
+        alignItems: "center", padding: "8px 0",
       }}>
-        {/* 背景色方塊 + 強調色圓點疊加 */}
         <span style={{ position: "relative", display: "inline-flex", width: 18, height: 18 }}>
           <span style={{
             width: 18, height: 18, borderRadius: 4,
@@ -91,54 +90,61 @@ function ThemePickerDot() {
         </span>
       </button>
 
+      {/* fixed 定位，跳出 overflow:hidden 的側邊欄 */}
       {open && (
-        <div style={{
-          position: "absolute", bottom: "100%", left: SIDEBAR_W + 6,
-          background: C.card, border: `1px solid ${C.border}`,
-          borderRadius: 12, padding: "14px", zIndex: 60,
-          minWidth: 180, boxShadow: "0 6px 20px rgba(0,0,0,0.45)",
-        }}>
-          <div style={{ fontSize: 11, color: C.sage, fontWeight: 700, marginBottom: 8,
-            letterSpacing: "0.06em" }}>背景</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
-            {BG_THEMES.map(t => (
-              <button key={t.key} onClick={() => setBg(t.key)} title={t.name} style={{
-                display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
-                background: "transparent", border: "none", cursor: "pointer", padding: 2,
-              }}>
-                <span style={{
-                  width: 28, height: 28, borderRadius: 8, display: "block",
-                  background: t.preview,
-                  border: bgKey === t.key ? `2px solid ${C.gold}` : `2px solid ${C.border}`,
-                }} />
-                <span style={{ fontSize: 9, color: bgKey === t.key ? C.gold : C.sage, whiteSpace: "nowrap" }}>
-                  {t.name}
-                </span>
-              </button>
-            ))}
-          </div>
+        <>
+          <div onClick={() => setOpen(false)} style={{
+            position: "fixed", inset: 0, zIndex: 59,
+          }} />
+          <div style={{
+            position: "fixed", bottom: 16, left: SIDEBAR_W + 8,
+            background: C.card, border: `1px solid ${C.border}`,
+            borderRadius: 12, padding: "14px", zIndex: 60,
+            minWidth: 190, boxShadow: "0 6px 24px rgba(0,0,0,0.5)",
+          }}>
+            <div style={{ fontSize: 11, color: C.sage, fontWeight: 700, marginBottom: 8,
+              letterSpacing: "0.06em" }}>背景</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
+              {BG_THEMES.map(t => (
+                <button key={t.key} onClick={() => { setBg(t.key); }} title={t.name} style={{
+                  display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
+                  background: "transparent", border: "none", cursor: "pointer", padding: 2,
+                }}>
+                  <span style={{
+                    width: 28, height: 28, borderRadius: 8, display: "block",
+                    background: t.preview,
+                    border: bgKey === t.key ? `2px solid ${C.gold}` : `2px solid ${C.border}`,
+                    boxShadow: bgKey === t.key ? `0 0 0 1px ${C.gold}` : "none",
+                  }} />
+                  <span style={{ fontSize: 9, color: bgKey === t.key ? C.gold : C.sage, whiteSpace: "nowrap" }}>
+                    {t.name}
+                  </span>
+                </button>
+              ))}
+            </div>
 
-          <div style={{ fontSize: 11, color: C.sage, fontWeight: 700, marginBottom: 8,
-            letterSpacing: "0.06em" }}>強調色</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {ACCENT_THEMES.map(t => (
-              <button key={t.key} onClick={() => setAccent(t.key)} title={t.name} style={{
-                display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
-                background: "transparent", border: "none", cursor: "pointer", padding: 2,
-              }}>
-                <span style={{
-                  width: 24, height: 24, borderRadius: "50%", display: "block",
-                  background: t.accent,
-                  border: accentKey === t.key ? `2px solid ${C.ivory}` : `2px solid transparent`,
-                  boxShadow: accentKey === t.key ? `0 0 0 1px ${t.accent}` : "none",
-                }} />
-                <span style={{ fontSize: 9, color: accentKey === t.key ? C.gold : C.sage, whiteSpace: "nowrap" }}>
-                  {t.name}
-                </span>
-              </button>
-            ))}
+            <div style={{ fontSize: 11, color: C.sage, fontWeight: 700, marginBottom: 8,
+              letterSpacing: "0.06em" }}>強調色</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {ACCENT_THEMES.map(t => (
+                <button key={t.key} onClick={() => { setAccent(t.key); }} title={t.name} style={{
+                  display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
+                  background: "transparent", border: "none", cursor: "pointer", padding: 2,
+                }}>
+                  <span style={{
+                    width: 24, height: 24, borderRadius: "50%", display: "block",
+                    background: t.accent,
+                    border: accentKey === t.key ? `2px solid ${C.ivory}` : `2px solid transparent`,
+                    boxShadow: accentKey === t.key ? `0 0 0 1px ${t.accent}` : "none",
+                  }} />
+                  <span style={{ fontSize: 9, color: accentKey === t.key ? C.gold : C.sage, whiteSpace: "nowrap" }}>
+                    {t.name}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );
