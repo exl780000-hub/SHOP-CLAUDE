@@ -402,12 +402,33 @@ function PriceBlock({ card, cardIndex, onUpdate }) {
               style={{flex:1, background:C.mid, border:`1px solid ${card.customPrice?color:C.border}`, borderRadius:8, padding:"8px 12px", color:C.ivory, fontSize:14, fontWeight:700, outline:"none"}} />
             {card.customPrice && <button onClick={()=>onUpdate({...card,customPrice:""})} style={{cursor:"pointer", background:"transparent", border:"none", color:C.sage, fontSize:12}}>清除</button>}
           </div>
-          {card.customPrice && (
-            <div style={{marginTop:6, padding:"8px 12px", background:C.green+"18", border:`1px solid ${C.green}44`, borderRadius:8, display:"flex", justifyContent:"space-between"}}>
-              <span style={{fontSize:11, color:C.sage}}>實際售價</span>
-              <span style={{fontSize:16, fontWeight:700, color:C.green, fontFamily:"Georgia,serif"}}>${Number(card.customPrice).toLocaleString()}</span>
-            </div>
-          )}
+          {card.customPrice && (() => {
+            const raw = gongben + fabricTotal + bs;
+            const cp = Number(card.customPrice);
+            const customPr = raw > 0 ? (cp - raw) / raw : 0;
+            const diff = cp - suggested;
+            const prColor = customPr >= pr ? C.green : customPr >= 0 ? C.gold : C.red;
+            return (
+              <div style={{marginTop:6, padding:"10px 12px", background:C.mid, border:`1px solid ${C.border}`, borderRadius:8}}>
+                <div style={{display:"flex", justifyContent:"space-between", marginBottom:6}}>
+                  <span style={{fontSize:11, color:C.sage}}>實際售價</span>
+                  <span style={{fontSize:16, fontWeight:700, color:C.green, fontFamily:"Georgia,serif"}}>${cp.toLocaleString()}</span>
+                </div>
+                {raw > 0 && (
+                  <div style={{display:"flex", justifyContent:"space-between", marginBottom:4}}>
+                    <span style={{fontSize:11, color:C.sage}}>實際利潤率</span>
+                    <span style={{fontSize:14, fontWeight:700, color:prColor}}>{(customPr*100).toFixed(1)}%</span>
+                  </div>
+                )}
+                <div style={{display:"flex", justifyContent:"space-between"}}>
+                  <span style={{fontSize:11, color:C.sage}}>與建議售價差</span>
+                  <span style={{fontSize:12, fontWeight:700, color: diff>=0?C.green:C.red}}>
+                    {diff>=0?"＋":"－"}${Math.abs(diff).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            );
+          })()}
         </div>
 
         {/* 二件式拆分 */}
