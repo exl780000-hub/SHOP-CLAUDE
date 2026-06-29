@@ -28,6 +28,29 @@ function detectItem(items = "") {
   return "";
 }
 
+// 從 jacketStyle 文字（｜分隔）解析出加價項目
+function parseJacketStyle(styleText = "") {
+  const m = styleText.match(/扣(\d+)/);
+  const btnCount = m ? parseInt(m[1]) : 0;
+  return {
+    doubles:     styleText.includes("雙排釦"),
+    milan:       styleText.includes("米蘭眼"),
+    ticket:      styleText.includes("票帶"),
+    sword:       styleText.includes("劍領"),
+    half:        styleText.includes("半裡"),
+    full:        styleText.includes("全單"),
+    overcoat:    styleText.includes("大衣"),
+    buttonholes: btnCount,
+    milanHoles:  styleText.includes("米蘭眼") ? btnCount : 0,
+  };
+}
+
+// 從 trouserStyle 文字解析褲子特殊加項
+function parseTrouserStyle(styleText = "") {
+  const m = styleText.match(/特殊工資\$(\d+)/);
+  return { extra: m ? parseInt(m[1]) : 0 };
+}
+
 function SaveBtn({ saving, dirty, onClick }) {
   if (!dirty) return null;
   return (
@@ -57,19 +80,20 @@ function CheckItem({ label, add, checked, onToggle }) {
 // ── 外套師傅工資卡 ──
 function JacketWageCard({ order, onSaved }) {
   const BASE = 7000;
-  const [doubles, setDoubles] = useState(false);
-  const [milan, setMilan] = useState(false);
-  const [buttonholes, setButtonholes] = useState(0);
-  const [milanHoles, setMilanHoles] = useState(0);
-  const [ticket, setTicket] = useState(false);
-  const [sword, setSword] = useState(false);
-  const [half, setHalf] = useState(false);
-  const [full, setFull] = useState(false);
-  const [overcoat, setOvercoat] = useState(false);
-  const [extra, setExtra] = useState(0);
-  const [override, setOverride] = useState("");
+  const parsed = parseJacketStyle(order.jacketStyle || "");
+  const [doubles,     setDoubles]     = useState(parsed.doubles);
+  const [milan,       setMilan]       = useState(parsed.milan);
+  const [buttonholes, setButtonholes] = useState(parsed.buttonholes);
+  const [milanHoles,  setMilanHoles]  = useState(parsed.milanHoles);
+  const [ticket,      setTicket]      = useState(parsed.ticket);
+  const [sword,       setSword]       = useState(parsed.sword);
+  const [half,        setHalf]        = useState(parsed.half);
+  const [full,        setFull]        = useState(parsed.full);
+  const [overcoat,    setOvercoat]    = useState(parsed.overcoat);
+  const [extra,       setExtra]       = useState(0);
+  const [override,    setOverride]    = useState("");
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [saved,  setSaved]  = useState(false);
 
   const calcTotal = BASE
     + (doubles ? 600 : 0)
@@ -173,10 +197,15 @@ function JacketWageCard({ order, onSaved }) {
         {/* 工資合計 + 手動覆蓋 */}
         <div style={{ background: C.mid, borderRadius: 8, padding: "10px 12px", marginBottom: 12 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-            <span style={{ fontSize: 12, color: C.sage }}>計算結果</span>
+            <span style={{ fontSize: 12, color: C.sage }}>自動計算</span>
             <span style={{ fontSize: 16, fontWeight: 700, color: C.gold, fontFamily: "Georgia,serif" }}>${calcTotal.toLocaleString()}</span>
           </div>
-          <div style={{ fontSize: 11, color: C.sage, marginBottom: 4 }}>手動調整（選填，留空使用計算結果）</div>
+          {savedWage > 0 && savedWage !== calcTotal && (
+            <div style={{ fontSize: 11, color: C.blue, marginBottom: 6 }}>
+              已儲存工資 ${savedWage.toLocaleString()}（與計算值不同，請確認）
+            </div>
+          )}
+          <div style={{ fontSize: 11, color: C.sage, marginBottom: 4 }}>手動調整（留空 = 使用計算結果）</div>
           <input type="number" value={override} onChange={e => setOverride(e.target.value)} placeholder={String(calcTotal)}
             style={{ width: "100%", boxSizing: "border-box", background: C.bg, border: `1px solid ${override !== "" ? C.gold : C.border}`,
               borderRadius: 6, padding: "7px 10px", color: C.gold, fontSize: 15, fontWeight: 700,
@@ -194,7 +223,7 @@ function JacketWageCard({ order, onSaved }) {
 // ── 褲子師傅工資卡 ──
 function TrouserWageCard({ order, onSaved }) {
   const BASE = 1900;
-  const [extra, setExtra] = useState(0);
+  const [extra, setExtra] = useState(parseTrouserStyle(order.trouserStyle || "").extra);
   const [override, setOverride] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -256,10 +285,15 @@ function TrouserWageCard({ order, onSaved }) {
         </div>
         <div style={{ background: C.mid, borderRadius: 8, padding: "10px 12px", marginBottom: 12 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-            <span style={{ fontSize: 12, color: C.sage }}>計算結果</span>
+            <span style={{ fontSize: 12, color: C.sage }}>自動計算</span>
             <span style={{ fontSize: 16, fontWeight: 700, color: C.gold, fontFamily: "Georgia,serif" }}>${calcTotal.toLocaleString()}</span>
           </div>
-          <div style={{ fontSize: 11, color: C.sage, marginBottom: 4 }}>手動調整（選填）</div>
+          {savedWage > 0 && savedWage !== calcTotal && (
+            <div style={{ fontSize: 11, color: C.blue, marginBottom: 6 }}>
+              已儲存工資 ${savedWage.toLocaleString()}（與計算值不同，請確認）
+            </div>
+          )}
+          <div style={{ fontSize: 11, color: C.sage, marginBottom: 4 }}>手動調整（留空 = 使用計算結果）</div>
           <input type="number" value={override} onChange={e => setOverride(e.target.value)} placeholder={String(calcTotal)}
             style={{ width: "100%", boxSizing: "border-box", background: C.bg, border: `1px solid ${override !== "" ? C.gold : C.border}`,
               borderRadius: 6, padding: "7px 10px", color: C.gold, fontSize: 15, fontWeight: 700,
