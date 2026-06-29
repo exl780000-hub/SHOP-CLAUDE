@@ -23,6 +23,8 @@ const FLOW_COLOR = {
   "✂️ 製作中": C.blue,
 };
 
+const FILTER_OPTS = ["全部", "進行中", "✅ 完成"];
+
 function flowColor(f) {
   return FLOW_COLOR[f] || C.gold;
 }
@@ -31,7 +33,10 @@ export default function Orders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("全部");
   const [expanded, setExpanded] = useState(null);
+  const [measurement, setMeasurement] = useState({});   // { [orderId]: { data, note } | null }
+  const [loadingMeas, setLoadingMeas] = useState({});
   const [updatingFlow, setUpdatingFlow] = useState(null);
   const [toast, setToast] = useState(null);
 
@@ -46,6 +51,25 @@ export default function Orders() {
   };
 
   useEffect(() => { load(); }, []);
+
+  const fetchMeasurement = async (orderId) => {
+    if (measurement[orderId] !== undefined) return;
+    setLoadingMeas(p => ({ ...p, [orderId]: true }));
+    try {
+      const r = await fetch(`/api/measurement?orderId=${orderId}`);
+      const d = await r.json();
+      setMeasurement(p => ({ ...p, [orderId]: d.measurement || null }));
+    } catch (e) {
+      setMeasurement(p => ({ ...p, [orderId]: null }));
+    }
+    setLoadingMeas(p => ({ ...p, [orderId]: false }));
+  };
+
+  const handleExpand = (orderId) => {
+    const next = expanded === orderId ? null : orderId;
+    setExpanded(next);
+    if (next) fetchMeasurement(next);
+  };
 
   const showToast = (msg, ok = true) => {
     setToast({ msg, ok });
@@ -71,6 +95,12 @@ export default function Orders() {
 
   const doSearch = () => load(search);
 
+  const filtered = orders.filter(o => {
+    if (filter === "✅ 完成") return o.flow === "✅ 完成";
+    if (filter === "進行中") return o.flow !== "✅ 完成";
+    return true;
+  });
+
   const StyleRow = ({ label, value }) => {
     if (!value) return null;
     return (
@@ -83,7 +113,7 @@ export default function Orders() {
   };
 
   const WageItem = ({ label, value }) => {
-    if (!value && value !== 0) return null;
+    if (!value) return null;
     return (
       <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: `1px solid ${C.border}` }}>
         <span style={{ fontSize: 12, color: C.sage }}>{label}</span>
@@ -96,7 +126,7 @@ export default function Orders() {
     <div style={{ maxWidth: 520, margin: "0 auto", padding: "14px 14px 80px" }}>
 
       {/* 搜尋 */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
         <input value={search} onChange={e => setSearch(e.target.value)}
           onKeyDown={e => e.key === "Enter" && doSearch()}
           placeholder="搜尋客戶名稱或訂單編號"
@@ -105,22 +135,43 @@ export default function Orders() {
           style={{ background: C.gold, color: C.bg, border: "none", borderRadius: 10, padding: "10px 16px", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>搜尋</button>
       </div>
 
+      {/* 篩選 */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+        {FILTER_OPTS.map(f => (
+          <button key={f} onClick={() => setFilter(f)} style={{
+            cursor: "pointer", borderRadius: 8, fontSize: 12, fontWeight: 600, padding: "6px 14px",
+            border: `1px solid ${filter === f ? C.gold : C.border}`,
+            background: filter === f ? C.gold + "22" : "transparent",
+            color: filter === f ? C.gold : C.sage,
+          }}>
+            {f}
+            {f === "進行中" && orders.filter(o => o.flow !== "✅ 完成").length > 0 && (
+              <span style={{ marginLeft: 5, background: C.gold, color: C.bg, borderRadius: 10, padding: "1px 6px", fontSize: 10, fontWeight: 700 }}>
+                {orders.filter(o => o.flow !== "✅ 完成").length}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
       {loading && <div style={{ color: C.sage, textAlign: "center", padding: 30 }}>載入中...</div>}
 
-      {!loading && orders.length === 0 && (
+      {!loading && filtered.length === 0 && (
         <div style={{ color: C.sage, textAlign: "center", padding: 40 }}>沒有找到訂單</div>
       )}
 
-      {orders.map(o => {
+      {filtered.map(o => {
         const isOpen = expanded === o.id;
         const fc = flowColor(o.flow);
         const balance = (o.actualPrice || 0) - (o.deposit || 0);
+        const meas = measurement[o.id];
+        const measLoading = loadingMeas[o.id];
 
         return (
           <div key={o.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, marginBottom: 10, overflow: "hidden" }}>
 
             {/* 訂單列表行 */}
-            <div onClick={() => setExpanded(isOpen ? null : o.id)}
+            <div onClick={() => handleExpand(o.id)}
               style={{ padding: "12px 16px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{o.name}</div>
@@ -174,15 +225,15 @@ export default function Orders() {
                     <div style={{ display: "flex", gap: 8 }}>
                       <div style={{ flex: 1, textAlign: "center" }}>
                         <div style={{ fontSize: 10, color: C.sage, marginBottom: 2 }}>實際售價</div>
-                        <div style={{ fontSize: 16, fontWeight: 700, color: C.gold, fontFamily: "Georgia,serif" }}>${Number(o.actualPrice).toLocaleString()}</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: C.gold, fontFamily: "Georgia,serif" }}>${Number(o.actualPrice).toLocaleString()}</div>
                       </div>
                       <div style={{ flex: 1, textAlign: "center" }}>
                         <div style={{ fontSize: 10, color: C.sage, marginBottom: 2 }}>訂金</div>
-                        <div style={{ fontSize: 16, fontWeight: 700, color: C.ivory, fontFamily: "Georgia,serif" }}>${Number(o.deposit || 0).toLocaleString()}</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: C.ivory, fontFamily: "Georgia,serif" }}>${Number(o.deposit || 0).toLocaleString()}</div>
                       </div>
                       <div style={{ flex: 1, textAlign: "center" }}>
                         <div style={{ fontSize: 10, color: C.sage, marginBottom: 2 }}>尾款</div>
-                        <div style={{ fontSize: 16, fontWeight: 700, color: C.green, fontFamily: "Georgia,serif" }}>${Number(balance).toLocaleString()}</div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: balance > 0 ? C.green : C.sage, fontFamily: "Georgia,serif" }}>${Number(balance).toLocaleString()}</div>
                       </div>
                     </div>
                   </div>
@@ -191,11 +242,10 @@ export default function Orders() {
                 {/* 工資估算 */}
                 {o.totalWage ? (
                   <div style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: 11, color: C.gold, fontWeight: 700, marginBottom: 8 }}>🧾 工資估算</div>
+                    <div style={{ fontSize: 11, color: C.gold, fontWeight: 700, marginBottom: 8 }}>🧾 師傅工資</div>
                     <div style={{ background: C.mid, borderRadius: 8, padding: "10px 12px" }}>
                       <WageItem label="外套師傅" value={o.jacketWage} />
                       <WageItem label="褲子師傅" value={o.trouserWage} />
-                      <WageItem label="背心工資" value={o.vestWage} />
                       <WageItem label="經理+打板" value={o.managerFee} />
                       <div style={{ display: "flex", justifyContent: "space-between", padding: "6px 0 0" }}>
                         <span style={{ fontSize: 12, fontWeight: 700, color: C.ivory }}>工資合計</span>
@@ -215,6 +265,28 @@ export default function Orders() {
                     <StyleRow label="襯衫" value={o.shirtStyle} />
                   </div>
                 )}
+
+                {/* 量身資料 */}
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 11, color: C.gold, fontWeight: 700, marginBottom: 8 }}>📐 量身資料</div>
+                  {measLoading ? (
+                    <div style={{ fontSize: 12, color: C.sage, padding: "8px 10px" }}>載入中...</div>
+                  ) : meas ? (
+                    <div style={{ background: C.mid, borderRadius: 8, padding: "10px 12px" }}>
+                      {meas.data && (
+                        <div style={{ fontSize: 12, color: C.ivory, whiteSpace: "pre-wrap", lineHeight: 1.8, fontFamily: "monospace" }}>{meas.data}</div>
+                      )}
+                      {meas.note && (
+                        <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${C.border}` }}>
+                          <span style={{ fontSize: 11, color: C.sage }}>體型備註：</span>
+                          <span style={{ fontSize: 12, color: C.ivory }}>{meas.note}</span>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: 12, color: C.border, padding: "8px 10px" }}>尚無量身記錄</div>
+                  )}
+                </div>
 
                 {/* Notion 連結 */}
                 <a href={o.url} target="_blank" rel="noreferrer"
