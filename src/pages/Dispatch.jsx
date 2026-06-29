@@ -38,9 +38,9 @@ const ALTER_TROUSER = [
 ];
 
 const STATUS_COLOR = {
-  "⏳ 待完成": C.gold,
-  "✅ 完成":   C.green,
-  "❌ 取消":   C.red,
+  "⏳ 待完成": "#C9A84C",
+  "✅ 完成":   "#5E9E6E",
+  "❌ 取消":   "#E05252",
 };
 
 function AlterBlock({ items, checked, onToggle, extraNote, onNote }) {

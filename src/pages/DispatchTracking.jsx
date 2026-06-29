@@ -13,12 +13,12 @@ const FLOW_NEEDED = {
 };
 
 const FLOW_COLOR = {
-  "📐 打版":    C.blue,
-  "🪡 製作毛胚": C.purple,
-  "✂️ 開始製作": C.gold,
+  "📐 打版":    "#4A7AB5",
+  "🪡 製作毛胚": "#8A6ABF",
+  "✂️ 開始製作": "#C9A84C",
   "🧍 第二試身": "#E09E4C",
-  "🪢 最後縫製": C.sage,
-  "🎉 完成訂單": C.green,
+  "🪢 最後縫製": "#7A9E8A",
+  "🎉 完成訂單": "#5E9E6E",
 };
 
 function Tag({ color, children }) {
