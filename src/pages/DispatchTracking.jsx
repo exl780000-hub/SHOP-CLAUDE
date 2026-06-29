@@ -1,12 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-
-const C = {
-  bg: "#0F1923", card: "#1A2535", border: "#2A3A50",
-  gold: "#C9A84C", ivory: "#F0EBE0", sage: "#7A9E8A",
-  green: "#5E9E6E", red: "#E05252", mid: "#2A3A50", blue: "#4A7AB5",
-  purple: "#8A6ABF",
-};
+import { useTheme } from "../theme.jsx";
 
 const TODAY = new Date().toISOString().slice(0, 10);
 
@@ -28,6 +22,7 @@ const FLOW_COLOR = {
 };
 
 function Tag({ color, children }) {
+  const C = useTheme();
   return (
     <span style={{
       fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 20,
@@ -41,6 +36,7 @@ function isOverdue(deadline) {
 }
 
 export default function DispatchTracking() {
+  const C = useTheme();
   const navigate = useNavigate();
   const [dispatches, setDispatches] = useState([]);
   const [orders, setOrders]         = useState([]);

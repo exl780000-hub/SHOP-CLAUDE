@@ -1,11 +1,5 @@
 import { useState, useEffect } from "react";
-
-const C = {
-  bg: "#0F1923", card: "#1A2535", border: "#2A3A50",
-  gold: "#C9A84C", ivory: "#F0EBE0", sage: "#7A9E8A",
-  red: "#E05252", green: "#5E9E6E", mid: "#2A3A50", blue: "#4A7AB5",
-  purple: "#B87AB5",
-};
+import { useTheme } from "../theme.jsx";
 
 const DISPATCH_TYPES = [
   { type: "📐 打版單",    tailors: ["經理"],                    content: "full",          flows: ["📐 打版"] },
@@ -50,6 +44,7 @@ const STATUS_COLOR = {
 };
 
 function AlterBlock({ items, checked, onToggle, extraNote, onNote }) {
+  const C = useTheme();
   return (
     <div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
@@ -74,6 +69,7 @@ function AlterBlock({ items, checked, onToggle, extraNote, onNote }) {
 }
 
 function Sec({ title, children, accent }) {
+  const C = useTheme();
   return (
     <div style={{ background: C.card, border: `1px solid ${accent ? accent + "55" : C.border}`,
       borderRadius: 12, padding: "16px 18px", marginBottom: 12 }}>
@@ -84,6 +80,7 @@ function Sec({ title, children, accent }) {
 }
 
 export default function Dispatch() {
+  const C = useTheme();
   const [search, setSearch]                   = useState("");
   const [orders, setOrders]                   = useState([]);
   const [loading, setLoading]                 = useState(false);

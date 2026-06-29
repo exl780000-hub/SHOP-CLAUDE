@@ -1,10 +1,5 @@
 import { useState, useEffect } from "react";
-
-const C = {
-  bg: "#0F1923", card: "#1A2535", border: "#2A3A50",
-  gold: "#C9A84C", ivory: "#F0EBE0", sage: "#7A9E8A",
-  red: "#E05252", green: "#5E9E6E", mid: "#2A3A50", blue: "#4A7AB5",
-};
+import { useTheme } from "../theme.jsx";
 
 const FLOW_STEPS = [
   "📋 訂單建立",
@@ -17,19 +12,17 @@ const FLOW_STEPS = [
   "✅ 完成",
 ];
 
-const FLOW_COLOR = {
-  "✅ 完成": C.green,
-  "🔧 修改": C.red,
-  "✂️ 製作中": C.blue,
+const FLOW_COLOR_FIXED = {
+  "✅ 完成": "#5E9E6E",
+  "🔧 修改": "#E05252",
+  "✂️ 製作中": "#4A7AB5",
 };
 
 const FILTER_OPTS = ["全部", "進行中", "✅ 完成"];
 
-function flowColor(f) {
-  return FLOW_COLOR[f] || C.gold;
-}
-
 export default function Orders() {
+  const C = useTheme();
+  const flowColor = (f) => FLOW_COLOR_FIXED[f] || C.gold;
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");

@@ -1,10 +1,5 @@
 import { useState } from "react";
-
-const C = {
-  bg:"#0F1923", card:"#1A2535", border:"#2A3A50",
-  gold:"#C9A84C", ivory:"#F0EBE0", sage:"#7A9E8A",
-  red:"#E05252", green:"#5E9E6E", blue:"#4A7AB5", mid:"#2A3A50",
-};
+import { useTheme } from "../theme.jsx";
 
 // ─── Pricing ──────────────────────────────────────────────────────────────────
 const GONGBEN = {
@@ -118,53 +113,72 @@ const BODY_TRAITS = {
 };
 
 // ─── Shared UI ────────────────────────────────────────────────────────────────
-const Sec = ({title, children, accent, style={}}) => (
-  <div style={{background:C.card, border:`1px solid ${accent||C.border}`, borderRadius:12, padding:"16px 18px", marginBottom:12, ...style}}>
-    {title && <div style={{fontSize:12, color:accent||C.gold, fontWeight:700, letterSpacing:"0.07em", marginBottom:12, paddingBottom:9, borderBottom:`1px solid ${C.border}`}}>{title}</div>}
-    {children}
-  </div>
-);
-const Lbl = ({children}) => <div style={{fontSize:11, color:C.gold, fontWeight:700, letterSpacing:"0.07em", marginBottom:5}}>{children}</div>;
-const TxtIn = ({label, value, onChange, type="text", placeholder="", style={}}) => (
-  <div style={{display:"flex", flexDirection:"column", ...style}}>
-    {label && <Lbl>{label}</Lbl>}
-    <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}
-      style={{background:C.mid, border:`1px solid ${C.border}`, borderRadius:8, padding:"9px 12px", color:C.ivory, fontSize:14, outline:"none", width:"100%", boxSizing:"border-box"}} />
-  </div>
-);
-const Chip = ({label, active, onClick, color}) => (
-  <button onClick={onClick} style={{
-    cursor:"pointer", borderRadius:8, fontSize:12, fontWeight:600, padding:"7px 12px",
-    border:`1px solid ${active?(color||C.gold):C.border}`,
-    background:active?(color||C.gold)+"22":"transparent",
-    color:active?(color||C.gold):C.sage,
-  }}>{label}</button>
-);
-const NumIn = ({label, value, onChange, unit="in"}) => (
-  <div style={{display:"flex", flexDirection:"column", gap:3}}>
-    <div style={{fontSize:10, color:C.sage, textAlign:"center"}}>{label}</div>
-    <div style={{display:"flex", alignItems:"center", gap:3}}>
-      <input type="number" value={value} onChange={e=>onChange(e.target.value)}
-        style={{width:"100%", background:C.mid, border:`1px solid ${C.border}`, borderRadius:6, padding:"6px 6px", color:C.ivory, fontSize:12, outline:"none", boxSizing:"border-box", textAlign:"center"}} />
-      <span style={{fontSize:9, color:C.sage, whiteSpace:"nowrap"}}>{unit}</span>
+function Sec({title, children, accent, style={}}) {
+  const C = useTheme();
+  return (
+    <div style={{background:C.card, border:`1px solid ${accent||C.border}`, borderRadius:12, padding:"16px 18px", marginBottom:12, ...style}}>
+      {title && <div style={{fontSize:12, color:accent||C.gold, fontWeight:700, letterSpacing:"0.07em", marginBottom:12, paddingBottom:9, borderBottom:`1px solid ${C.border}`}}>{title}</div>}
+      {children}
     </div>
-  </div>
-);
-const MeasCell = ({label, value, onChange}) => (
-  <div style={{display:"flex", flexDirection:"column", alignItems:"center", padding:"8px 4px",
-    borderRight:`1px solid ${C.border}44`, borderBottom:`1px solid ${C.border}44`}}>
-    <div style={{fontSize:10, color:C.sage, marginBottom:4, letterSpacing:"0.04em"}}>{label}</div>
-    <input type="number" value={value} onChange={e=>onChange(e.target.value)}
-      placeholder="—"
-      style={{width:"100%", background:"transparent", border:"none", borderBottom:`1px solid ${value?C.gold:C.border}`,
-        color:value?C.gold:C.border, fontSize:15, fontWeight:700, outline:"none",
-        textAlign:"center", fontFamily:"Georgia,serif", padding:"2px 0"}} />
-    <div style={{fontSize:9, color:C.border, marginTop:3}}>in</div>
-  </div>
-);
+  );
+}
+function Lbl({children}) {
+  const C = useTheme();
+  return <div style={{fontSize:11, color:C.gold, fontWeight:700, letterSpacing:"0.07em", marginBottom:5}}>{children}</div>;
+}
+function TxtIn({label, value, onChange, type="text", placeholder="", style={}}) {
+  const C = useTheme();
+  return (
+    <div style={{display:"flex", flexDirection:"column", ...style}}>
+      {label && <Lbl>{label}</Lbl>}
+      <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}
+        style={{background:C.mid, border:`1px solid ${C.border}`, borderRadius:8, padding:"9px 12px", color:C.ivory, fontSize:14, outline:"none", width:"100%", boxSizing:"border-box"}} />
+    </div>
+  );
+}
+function Chip({label, active, onClick, color}) {
+  const C = useTheme();
+  return (
+    <button onClick={onClick} style={{
+      cursor:"pointer", borderRadius:8, fontSize:12, fontWeight:600, padding:"7px 12px",
+      border:`1px solid ${active?(color||C.gold):C.border}`,
+      background:active?(color||C.gold)+"22":"transparent",
+      color:active?(color||C.gold):C.sage,
+    }}>{label}</button>
+  );
+}
+function NumIn({label, value, onChange, unit="in"}) {
+  const C = useTheme();
+  return (
+    <div style={{display:"flex", flexDirection:"column", gap:3}}>
+      <div style={{fontSize:10, color:C.sage, textAlign:"center"}}>{label}</div>
+      <div style={{display:"flex", alignItems:"center", gap:3}}>
+        <input type="number" value={value} onChange={e=>onChange(e.target.value)}
+          style={{width:"100%", background:C.mid, border:`1px solid ${C.border}`, borderRadius:6, padding:"6px 6px", color:C.ivory, fontSize:12, outline:"none", boxSizing:"border-box", textAlign:"center"}} />
+        <span style={{fontSize:9, color:C.sage, whiteSpace:"nowrap"}}>{unit}</span>
+      </div>
+    </div>
+  );
+}
+function MeasCell({label, value, onChange}) {
+  const C = useTheme();
+  return (
+    <div style={{display:"flex", flexDirection:"column", alignItems:"center", padding:"8px 4px",
+      borderRight:`1px solid ${C.border}44`, borderBottom:`1px solid ${C.border}44`}}>
+      <div style={{fontSize:10, color:C.sage, marginBottom:4, letterSpacing:"0.04em"}}>{label}</div>
+      <input type="number" value={value} onChange={e=>onChange(e.target.value)}
+        placeholder="—"
+        style={{width:"100%", background:"transparent", border:"none", borderBottom:`1px solid ${value?C.gold:C.border}`,
+          color:value?C.gold:C.border, fontSize:15, fontWeight:700, outline:"none",
+          textAlign:"center", fontFamily:"Georgia,serif", padding:"2px 0"}} />
+      <div style={{fontSize:9, color:C.border, marginTop:3}}>in</div>
+    </div>
+  );
+}
 
 // ─── Photo Upload ─────────────────────────────────────────────────────────────
 function PhotoUpload({ label, photos, onAdd, onRemove }) {
+  const C = useTheme();
   const [uploading, setUploading] = useState(false);
   const [err, setErr] = useState("");
 
@@ -221,6 +235,7 @@ function PhotoUpload({ label, photos, onAdd, onRemove }) {
 
 // ─── Part Style Block ─────────────────────────────────────────────────────────
 function PartBlock({ part, styles, inputs, onToggle, onInput }) {
+  const C = useTheme();
   const defs = STYLE[part] || [];
   const color = PART_COLOR[part];
   return (
@@ -261,6 +276,7 @@ function PartBlock({ part, styles, inputs, onToggle, onInput }) {
 
 // ─── Card Component ───────────────────────────────────────────────────────────
 function CardBlock({ card, cardIndex, onUpdate, onRemove }) {
+  const C = useTheme();
   const cfg = CARD_TYPES[card.type];
   const color = cfg.color;
   const { fabricTotal, gongben, bs, pr, suggested, actual } = calcCard(card);
@@ -360,6 +376,7 @@ function CardBlock({ card, cardIndex, onUpdate, onRemove }) {
 
 // ─── Pricing Card (Step 4) ────────────────────────────────────────────────────
 function PriceBlock({ card, cardIndex, onUpdate }) {
+  const C = useTheme();
   const cfg = CARD_TYPES[card.type];
   const color = cfg.color;
   const { fabricTotal, gongben, bs, pr, suggested, actual } = calcCard(card);
@@ -470,6 +487,7 @@ function newCard(type) {
 
 // ─── App ──────────────────────────────────────────────────────────────────────
 export default function OrderEntry() {
+  const C = useTheme();
   const [step, setStep] = useState(0);
   const [customer, setCustomer] = useState({name:"",phone:"",gender:"",source:""});
   const [cards, setCards] = useState([]);

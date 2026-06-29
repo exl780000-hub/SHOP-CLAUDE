@@ -1,10 +1,5 @@
 import { useState, useEffect } from "react";
-
-const C = {
-  bg: "#0F1923", card: "#1A2535", border: "#2A3A50",
-  gold: "#C9A84C", ivory: "#F0EBE0", sage: "#7A9E8A",
-  green: "#5E9E6E", red: "#E05252", mid: "#2A3A50", blue: "#4A7AB5",
-};
+import { useTheme } from "../theme.jsx";
 
 const ACCOUNTS = ["🏦 銀行", "💵 現金", "💳 信用卡"];
 const CATEGORIES = ["材料成本", "人事成本", "固定成本", "其他支出", "其他收入"];
@@ -15,6 +10,7 @@ function monthStr(d = new Date()) {
 
 // ─── 工資月結區塊 ─────────────────────────────────────────────────────────────
 function WageSettlement({ month }) {
+  const C = useTheme();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [settling, setSettling] = useState(false);
@@ -104,6 +100,7 @@ function WageSettlement({ month }) {
 
 // ─── 月報表頁籤 ───────────────────────────────────────────────────────────────
 function Dashboard() {
+  const C = useTheme();
   const now = new Date();
   const [month, setMonth] = useState(monthStr(now));
   const [summary, setSummary] = useState(null);
@@ -223,6 +220,7 @@ function Dashboard() {
 
 // ─── 快速記帳頁籤 ──────────────────────────────────────────────────────────────
 function Expense() {
+  const C = useTheme();
   const [type, setType] = useState("💸 支出");
   const [account, setAccount] = useState("💵 現金");
   const [category, setCategory] = useState("其他支出");

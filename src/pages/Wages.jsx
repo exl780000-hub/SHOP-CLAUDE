@@ -1,10 +1,5 @@
 import { useState, useEffect } from "react";
-
-const C = {
-  bg: "#0F1923", card: "#1A2535", border: "#2A3A50",
-  gold: "#C9A84C", ivory: "#F0EBE0", sage: "#7A9E8A",
-  green: "#5E9E6E", red: "#E05252", mid: "#2A3A50", blue: "#4A7AB5",
-};
+import { useTheme } from "../theme.jsx";
 
 const TAILORS = ["全部", "外套師傅", "褲子師傅", "經理"];
 
@@ -52,6 +47,7 @@ function parseTrouserStyle(styleText = "") {
 }
 
 function SaveBtn({ saving, dirty, onClick }) {
+  const C = useTheme();
   if (!dirty) return null;
   return (
     <button onClick={onClick} disabled={saving} style={{
@@ -63,6 +59,7 @@ function SaveBtn({ saving, dirty, onClick }) {
 }
 
 function CheckItem({ label, add, checked, onToggle }) {
+  const C = useTheme();
   return (
     <button onClick={onToggle} style={{
       cursor: "pointer", borderRadius: 8, fontSize: 12, fontWeight: 600,
@@ -79,6 +76,7 @@ function CheckItem({ label, add, checked, onToggle }) {
 
 // ── 外套師傅工資卡 ──
 function JacketWageCard({ order, onSaved }) {
+  const C = useTheme();
   const BASE = 7000;
   const parsed = parseJacketStyle(order.jacketStyle || "");
   const [doubles,     setDoubles]     = useState(parsed.doubles);
@@ -222,6 +220,7 @@ function JacketWageCard({ order, onSaved }) {
 
 // ── 褲子師傅工資卡 ──
 function TrouserWageCard({ order, onSaved }) {
+  const C = useTheme();
   const BASE = 1900;
   const [extra, setExtra] = useState(parseTrouserStyle(order.trouserStyle || "").extra);
   const [override, setOverride] = useState("");
@@ -309,6 +308,7 @@ function TrouserWageCard({ order, onSaved }) {
 
 // ── 經理費卡 ──
 function ManagerFeeCard({ order, onSaved }) {
+  const C = useTheme();
   const item = detectItem(order.items);
   const baseMgr = MANAGER_FEE[item] || 0;
   const basePat = PATTERN_FEE[item] || 0;
@@ -391,6 +391,7 @@ function ManagerFeeCard({ order, onSaved }) {
 
 // ── 全部師傅工資卡（原版三欄） ──
 function FullWageCard({ order, onSaved }) {
+  const C = useTheme();
   const [j, setJ] = useState(String(order.jacketWage || 0));
   const [t, setT] = useState(String(order.trouserWage || 0));
   const [m, setM] = useState(String(order.managerFee || 0));
@@ -468,6 +469,7 @@ function FullWageCard({ order, onSaved }) {
 }
 
 export default function Wages() {
+  const C = useTheme();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dispatchedOrderIds, setDispatchedOrderIds] = useState(null);
