@@ -123,9 +123,10 @@ export default function Dispatch() {
       setDtype(null); setTailor(""); setDeadline("");
       setAlterChecked([]); setAlterNote("");
     } catch (e) {
-      setResult({ ok: false, msg: e.message });
+      setResult({ ok: false, msg: e.message || "建立失敗，請重試" });
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitting(false);
   };
 
   const handleSelectDtype = (dt) => {
