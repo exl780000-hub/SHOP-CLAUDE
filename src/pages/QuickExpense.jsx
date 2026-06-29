@@ -13,6 +13,95 @@ function monthStr(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
+// ─── 工資月結區塊 ─────────────────────────────────────────────────────────────
+function WageSettlement({ month }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [settling, setSettling] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const load = async () => {
+    setLoading(true); setResult(null);
+    try {
+      const r = await fetch(`/api/wage-settlement?month=${month}`);
+      const d = await r.json();
+      if (d.success) setData(d);
+    } catch (e) { console.error(e); }
+    setLoading(false);
+  };
+
+  const settle = async () => {
+    if (!data?.byTailor?.length) return;
+    setSettling(true);
+    try {
+      const r = await fetch("/api/wage-settlement", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ month, tailors: data.byTailor.map(t => ({ tailor: t.tailor, total: t.total })) }),
+      });
+      const d = await r.json();
+      setResult({ ok: d.success, msg: d.success ? d.message : d.error });
+    } catch (e) { setResult({ ok: false, msg: e.message }); }
+    setSettling(false);
+  };
+
+  if (!data && !loading) {
+    return (
+      <button onClick={load} style={{ width: "100%", padding: "12px", borderRadius: 10,
+        border: `1px solid ${C.border}`, background: "transparent", color: C.sage, fontSize: 13,
+        fontWeight: 600, cursor: "pointer" }}>🧾 載入工資月結預覽</button>
+    );
+  }
+
+  return (
+    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 16px", marginBottom: 12 }}>
+      <div style={{ fontSize: 12, color: C.gold, fontWeight: 700, marginBottom: 12 }}>🧾 師傅工資月結</div>
+      {loading && <div style={{ color: C.sage, fontSize: 13 }}>載入中...</div>}
+      {data && !loading && (
+        <>
+          {data.byTailor.length === 0 ? (
+            <div style={{ color: C.sage, fontSize: 13 }}>本月無已完成且填寫工資的派工單</div>
+          ) : (
+            <>
+              {data.byTailor.map(t => (
+                <div key={t.tailor} style={{ marginBottom: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: C.ivory }}>{t.tailor}</span>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: C.gold, fontFamily: "Georgia,serif" }}>${t.total.toLocaleString()}</span>
+                  </div>
+                  {t.items.map(item => (
+                    <div key={item.id} style={{ display: "flex", justifyContent: "space-between", padding: "3px 8px", borderLeft: `2px solid ${C.border}` }}>
+                      <span style={{ fontSize: 11, color: C.sage }}>{item.name}</span>
+                      <span style={{ fontSize: 11, color: C.ivory }}>${item.wage.toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderTop: `1px solid ${C.border}`, marginBottom: 10 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: C.ivory }}>工資合計</span>
+                <span style={{ fontSize: 16, fontWeight: 700, color: C.gold, fontFamily: "Georgia,serif" }}>${data.total.toLocaleString()}</span>
+              </div>
+              {result && (
+                <div style={{ marginBottom: 8, padding: "8px 12px", borderRadius: 8,
+                  background: (result.ok ? C.green : C.red) + "22", fontSize: 12, fontWeight: 700,
+                  color: result.ok ? C.green : C.red }}>
+                  {result.ok ? "✅ " : "❌ "}{result.msg}
+                </div>
+              )}
+              {!result?.ok && (
+                <button onClick={settle} disabled={settling} style={{ width: "100%", padding: "10px",
+                  borderRadius: 8, border: "none", background: settling ? C.mid : C.green,
+                  color: settling ? C.sage : "#fff", fontSize: 13, fontWeight: 700, cursor: settling ? "default" : "pointer" }}>
+                  {settling ? "結算中..." : `確認結算 ${month}`}
+                </button>
+              )}
+            </>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── 月報表頁籤 ───────────────────────────────────────────────────────────────
 function Dashboard() {
   const now = new Date();
@@ -125,6 +214,9 @@ function Dashboard() {
           )}
         </>
       )}
+
+      {/* 工資月結 */}
+      <WageSettlement month={month} />
     </div>
   );
 }
