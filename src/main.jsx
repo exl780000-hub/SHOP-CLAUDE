@@ -6,6 +6,7 @@ import Orders from "./pages/Orders.jsx";
 import Dispatch from "./pages/Dispatch.jsx";
 import DispatchTracking from "./pages/DispatchTracking.jsx";
 import QuickExpense from "./pages/QuickExpense.jsx";
+import Wages from "./pages/Wages.jsx";
 
 const C = {
   bg: "#0F1923", card: "#1A2535", border: "#2A3A50",
@@ -18,6 +19,7 @@ const PAGES = [
   { to: "/dispatch", label: "派工管理", icon: "✂️", desc: "建立打版、製作、修改派工單", color: "#7A9E8A" },
   { to: "/tracking", label: "派工追蹤", icon: "📊", desc: "追蹤師傅進度、確認工資",     color: "#B87AB5" },
   { to: "/expense",  label: "快速記帳", icon: "💰", desc: "記錄收支、產生固定成本",     color: "#E07A5F" },
+  { to: "/wages",   label: "工資計算", icon: "🧾", desc: "查看修改各訂單師傅工資",     color: "#5E9E6E" },
 ];
 
 function Home() {
@@ -88,6 +90,7 @@ function App() {
           <Route path="/dispatch" element={<Dispatch />} />
           <Route path="/tracking" element={<DispatchTracking />} />
           <Route path="/expense" element={<QuickExpense />} />
+          <Route path="/wages" element={<Wages />} />
         </Routes>
       </div>
     </HashRouter>
