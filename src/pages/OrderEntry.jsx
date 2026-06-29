@@ -150,16 +150,16 @@ const NumIn = ({label, value, onChange, unit="in"}) => (
     </div>
   </div>
 );
-const MeasRow = ({label, value, onChange, hint}) => (
-  <div style={{display:"flex", alignItems:"center", borderBottom:`1px solid ${C.border}44`, padding:"6px 0"}}>
-    <div style={{width:80, fontSize:13, color:C.ivory, flexShrink:0}}>{label}</div>
-    <div style={{flex:1, display:"flex", alignItems:"center", gap:6}}>
-      <input type="number" value={value} onChange={e=>onChange(e.target.value)}
-        placeholder="—"
-        style={{width:72, background:C.mid, border:`1px solid ${C.border}`, borderRadius:6, padding:"5px 8px", color:C.gold, fontSize:14, outline:"none", textAlign:"center", fontFamily:"Georgia,serif"}} />
-      <span style={{fontSize:11, color:C.sage}}>英吋</span>
-      {hint && <span style={{fontSize:10, color:C.border, marginLeft:2}}>{hint}</span>}
-    </div>
+const MeasCell = ({label, value, onChange}) => (
+  <div style={{display:"flex", flexDirection:"column", alignItems:"center", padding:"8px 4px",
+    borderRight:`1px solid ${C.border}44`, borderBottom:`1px solid ${C.border}44`}}>
+    <div style={{fontSize:10, color:C.sage, marginBottom:4, letterSpacing:"0.04em"}}>{label}</div>
+    <input type="number" value={value} onChange={e=>onChange(e.target.value)}
+      placeholder="—"
+      style={{width:"100%", background:"transparent", border:"none", borderBottom:`1px solid ${value?C.gold:C.border}`,
+        color:value?C.gold:C.border, fontSize:15, fontWeight:700, outline:"none",
+        textAlign:"center", fontFamily:"Georgia,serif", padding:"2px 0"}} />
+    <div style={{fontSize:9, color:C.border, marginTop:3}}>in</div>
   </div>
 );
 
@@ -660,14 +660,22 @@ export default function OrderEntry() {
         {step===2 && (
           <>
             {hasSuit && MEAS_SUIT.map(({group,fields})=>(
-              <Sec key={group} title={`📐 ${group}`}>
-                {fields.map(f=><MeasRow key={f} label={f} value={meas[f]||""} onChange={v=>setMeas(p=>({...p,[f]:v}))} />)}
+              <Sec key={group} title={`📐 ${group}`} style={{padding:"12px 12px"}}>
+                <div style={{display:"grid", gridTemplateColumns:"repeat(3,1fr)"}}>
+                  {fields.map(f=>(
+                    <MeasCell key={f} label={f} value={meas[f]||""} onChange={v=>setMeas(p=>({...p,[f]:v}))} />
+                  ))}
+                </div>
               </Sec>
             ))}
 
             {hasShirt && (
-              <Sec title="👕 襯衫尺寸">
-                {MEAS_SHIRT[0].fields.map(f=><MeasRow key={f} label={f} value={shirtMeas[f]||""} onChange={v=>setShirtMeas(p=>({...p,[f]:v}))} />)}
+              <Sec title="👕 襯衫尺寸" style={{padding:"12px 12px"}}>
+                <div style={{display:"grid", gridTemplateColumns:"repeat(3,1fr)"}}>
+                  {MEAS_SHIRT[0].fields.map(f=>(
+                    <MeasCell key={f} label={f} value={shirtMeas[f]||""} onChange={v=>setShirtMeas(p=>({...p,[f]:v}))} />
+                  ))}
+                </div>
               </Sec>
             )}
 
