@@ -60,8 +60,8 @@ export function buildStyleTexts(cards) {
 
 // 工資計算（論件，完成後可手動微調）
 export function calcWages(cards) {
-  const MANAGER_FEE = { "二件式": 2000, "三件式": 2400, "外套": 1600, "褲子": 400, "背心": 0, "襯衫": 200 };
-  const PATTERN_FEE = { "二件式": 4500, "三件式": 5800, "外套": 3200, "褲子": 1300, "背心": 0, "襯衫": 0 };
+  const MANAGER_FEE = { "二件式": 2000, "三件式": 2400, "外套": 1600, "褲子": 400, "背心": 400, "襯衫": 200 };
+  const PATTERN_FEE = { "二件式": 4500, "三件式": 5800, "外套": 3200, "褲子": 1300, "背心": 1300, "襯衫": 0 };
 
   let jacket = 0, trouser = 0, vest = 0, manager = 0;
 
@@ -79,12 +79,11 @@ export function calcWages(cards) {
       if ((ps["排扣"] || []).includes("雙排釦")) w += 600;              // 雙排
       if ((ps["眼型"] || []).includes("米蘭眼") && btnCount > 0)
         w += btnCount * 100;                                            // 米蘭眼 100/顆
-      if ((ps["工藝加項"] || []).includes("票帶")) w += 100;
+      if ((ps["特殊"] || []).includes("票帶")) w += 100;
       if ((ps["領型"] || []).includes("劍領")) w += 300;
-      if ((ps["工藝加項"] || []).includes("半裡")) w += 300;
-      if ((ps["工藝加項"] || []).includes("全單")) w += 600;
-      if ((ps["工藝加項"] || []).includes("大衣")) w += 1500;
-      w += parseInt(pi["特殊工資"]) || 0;
+      if ((ps["特殊"] || []).includes("半裡")) w += 300;
+      if ((ps["特殊"] || []).includes("全單")) w += 600;
+      if ((ps["特殊"] || []).includes("大衣")) w += 1500;
       jacket += w;
     }
 
