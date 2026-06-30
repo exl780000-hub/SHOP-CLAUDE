@@ -13,12 +13,13 @@ const GONGBEN = {
 const DEF_YARDS = { "二件式":3.2, "三件式":4.0, "外套":2.5, "褲子":1.4, "背心":1.0, "襯衫":1.7 };
 
 function buSun(f) {
-  if(f<=4000)return 0; if(f<=6000)return 1000; if(f<=10000)return 2500;
-  if(f<=16000)return 4000; if(f<=20000)return 5000; if(f<=26000)return 6500; return 7000;
+  if(f<=4000) return 0;
+  const rate = Math.ceil((f - 4000) / 1000) * 0.05;
+  return Math.round(f * rate);
 }
 function profitRate(f, shirt) {
   if(shirt){if(f<=800)return 0.55;if(f<=1500)return 0.70;if(f<=2000)return 0.75;if(f<=2500)return 0.80;return 0.85;}
-  if(f<=4000)return 0;if(f<=6000)return 0.05;if(f<=10000)return 0.10;if(f<=16000)return 0.15;
+  if(f<=4000)return 0;if(f<=6000)return 0.05;if(f<=10000)return 0.08;if(f<=16000)return 0.14;
   if(f<=20000)return 0.20;if(f<=26000)return 0.25;return 0.30;
 }
 
