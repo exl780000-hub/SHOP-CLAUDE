@@ -66,24 +66,26 @@ export default async function handler(req, res) {
     const order = await createPage(DB.order, orderProps);
 
     // 5. 量身（西裝）
+    // 前端欄位 → Notion 欄位對應（只寫資料庫實際存在的欄位）
+    const MEAS_MAP = {
+      "胸圍": "胸圍", "腰圍": "腰圍", "臀圍": "臀圍", "肩寬": "肩寬",
+      "前胸寬": "前胸寬", "後背寬": "後背寬", "手腕圍": "手腕圍", "領圍": "頸圍",
+      "袖長": "袖長", "前身長": "外套衣長", "後身長": "背長",
+      "褲長": "褲長", "前檔長": "股上", "大腿圍": "大腿圍",
+      "小腿圍": "膝圍", "腳踝圍": "腳口",
+    };
     const hasMeas = measurements && Object.values(measurements).some(v => v !== "" && v != null);
     if (hasMeas) {
-      const MEAS_GROUPS = [
-        { label: "【上身】", fields: ["領圍","胸圍","腰圍","臀圍","肩寬","半肩寬","前胸寬","後背寬","上臂圍","下臂圍","手腕圍"] },
-        { label: "【長度】", fields: ["袖長","前身長","後身長","後領寬","背心長"] },
-        { label: "【下身】", fields: ["褲腰","褲長","前檔長","下檔長","大腿圍","小腿圍","腳踝圍"] },
-      ];
-      const measText = MEAS_GROUPS.map(g => {
-        const lines = g.fields.filter(f => measurements[f]).map(f => `  ${f.padEnd(4, "　")}${measurements[f]} in`);
-        return lines.length ? `${g.label}\n${lines.join("\n")}` : "";
-      }).filter(Boolean).join("\n");
       const measProps = {
         "量身名稱": prop.title(`${customer.name} - ${today}`),
         "客戶": prop.relation(customerId),
         "訂單": prop.relation(order.id),
         "量身日期": prop.date(today),
-        "量身資料": prop.text(measText),
       };
+      for (const [frontKey, notionKey] of Object.entries(MEAS_MAP)) {
+        const val = measurements[frontKey];
+        if (val !== "" && val != null) measProps[notionKey] = prop.number(Number(val));
+      }
       if (measNote) measProps["體型備註"] = prop.text(measNote);
       await createPage(DB.measurement, measProps);
     }
