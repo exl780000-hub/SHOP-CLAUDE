@@ -18,7 +18,7 @@ function buSun(f) {
 }
 function profitRate(f, shirt) {
   if(shirt){if(f<=800)return 0.55;if(f<=1500)return 0.70;if(f<=2000)return 0.75;if(f<=2500)return 0.80;return 0.85;}
-  if(f<=4000)return 0;if(f<=10000)return 0.10;if(f<=16000)return 0.15;
+  if(f<=4000)return 0;if(f<=6000)return 0.05;if(f<=10000)return 0.10;if(f<=16000)return 0.15;
   if(f<=20000)return 0.20;if(f<=26000)return 0.25;return 0.30;
 }
 
