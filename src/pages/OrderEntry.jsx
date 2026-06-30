@@ -829,19 +829,6 @@ export default function OrderEntry() {
         )}
       </div>
 
-      {/* Bottom Nav */}
-      <div style={{position:"fixed", bottom:62, right:0, background:C.card, borderTop:`1px solid ${C.border}`, padding:"12px 14px", display:"flex", gap:10, maxWidth:520, margin:"0 auto", left:"50%", transform:"translateX(-50%)", width:"100%", boxSizing:"border-box"}}>
-        {step>0 && (
-          <button onClick={()=>setStep(p=>p-1)} style={{flex:1, padding:"12px", borderRadius:10, border:`1px solid ${C.border}`, background:"transparent", color:C.sage, fontSize:14, fontWeight:700, cursor:"pointer"}}>← 上一步</button>
-        )}
-        {step<3 && (
-          <button onClick={()=>setStep(p=>p+1)} style={{
-            flex:2, padding:"12px", borderRadius:10, border:"none",
-            background:C.gold, color:C.bg,
-            fontSize:14, fontWeight:700, cursor:"pointer",
-          }}>下一步 →</button>
-        )}
-      </div>
     </div>
   );
 }
