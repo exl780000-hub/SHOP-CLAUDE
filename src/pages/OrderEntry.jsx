@@ -502,10 +502,17 @@ export default function OrderEntry() {
   const [submitting, setSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState(null);
 
+  const COMPANY_FEE_MAP = { "二件式":9800, "三件式":9800, "外套":7350, "褲子":2450, "背心":2450, "襯衫":0 };
+
   const handleSubmit = async () => {
     setSubmitting(true);
     setSubmitResult(null);
     try {
+      const totalCompanyFee = cards.reduce((s,c) => s + (COMPANY_FEE_MAP[c.type]||0), 0);
+      const totalProfit     = cards.reduce((s,c) => s + calcCard(c).profit, 0);
+      const totalGongben    = cards.reduce((s,c) => s + calcCard(c).gongben, 0);
+      const totalFabric     = cards.reduce((s,c) => s + calcCard(c).fabricTotal, 0);
+      const totalBuSun      = cards.reduce((s,c) => s + calcCard(c).bs, 0);
       const payload = {
         customer,
         cards,
@@ -516,6 +523,11 @@ export default function OrderEntry() {
         deposit,
         totalActual,
         totalSuggested,
+        totalCompanyFee,
+        totalProfit,
+        totalGongben,
+        totalFabric,
+        totalBuSun,
         stylePhotoUrls: stylePhotos,
         bodyPhotoUrls: bodyPhotos,
       };

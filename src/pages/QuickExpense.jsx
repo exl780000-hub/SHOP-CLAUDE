@@ -129,21 +129,21 @@ function Dashboard() {
     if (d <= now) setMonth(monthStr(d));
   };
 
-  const Stat = ({ label, value, color, big }) => (
-    <div style={{ flex: 1, textAlign: "center" }}>
-      <div style={{ fontSize: 10, color: C.sage, marginBottom: 3 }}>{label}</div>
-      <div style={{ fontSize: big ? 22 : 17, fontWeight: 700, color: color || C.ivory, fontFamily: "Georgia,serif" }}>
-        ${Number(value || 0).toLocaleString()}
-      </div>
-    </div>
-  );
-
-  const Sec = ({ title, children }) => (
-    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 16px", marginBottom: 12 }}>
-      <div style={{ fontSize: 12, color: C.gold, fontWeight: 700, marginBottom: 12 }}>{title}</div>
+  const Sec = ({ title, accent, children }) => (
+    <div style={{ background: C.card, border: `1px solid ${accent||C.border}`, borderRadius: 12, padding: "14px 16px", marginBottom: 12 }}>
+      {title && <div style={{ fontSize: 12, color: accent||C.gold, fontWeight: 700, marginBottom: 12 }}>{title}</div>}
       {children}
     </div>
   );
+  const Row = ({ label, value, color, bold }) => (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: `1px solid ${C.border}` }}>
+      <span style={{ fontSize: 12, color: bold ? C.ivory : C.sage, fontWeight: bold ? 700 : 400 }}>{label}</span>
+      <span style={{ fontSize: bold ? 16 : 13, fontWeight: bold ? 700 : 600, color: color || C.ivory, fontFamily: "Georgia,serif" }}>{value}</span>
+    </div>
+  );
+
+  const s = summary;
+  const netColor = !s ? C.sage : s.netProfit >= 0 ? C.green : C.red;
 
   return (
     <div style={{ maxWidth: 520, margin: "0 auto", padding: "14px 14px 80px" }}>
@@ -156,61 +156,97 @@ function Dashboard() {
 
       {loading && <div style={{ color: C.sage, textAlign: "center", padding: 30 }}>載入中...</div>}
 
-      {!loading && summary && (
-        <>
-          {/* 收支總覽 */}
-          <Sec title="📊 本月收支">
-            <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-              <Stat label="營收" value={summary.income} color={C.green} big />
-              <Stat label="支出" value={summary.expense} color={C.red} big />
+      {!loading && s && (<>
+
+        {/* 月收益總覽 */}
+        <div style={{ background: C.card, border: `2px solid ${netColor}55`, borderRadius: 14, padding: "16px", marginBottom: 12 }}>
+          <div style={{ fontSize: 11, color: C.sage, fontWeight: 700, marginBottom: 10 }}>📊 本月損益</div>
+          <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+            {[
+              { label: "公司費貢獻", value: s.totalCompanyFee, color: C.blue },
+              { label: "訂單利潤", value: s.totalOrderProfit, color: C.green },
+              { label: "月收益", value: s.netProfit, color: netColor, signed: true },
+            ].map(({ label, value, color, signed }) => (
+              <div key={label} style={{ flex: 1, textAlign: "center", background: C.mid, borderRadius: 10, padding: "10px 4px" }}>
+                <div style={{ fontSize: 9, color: C.sage, marginBottom: 4 }}>{label}</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color, fontFamily: "Georgia,serif" }}>
+                  {signed && value >= 0 ? "+" : ""}{value < 0 ? "-" : ""}${Math.abs(value).toLocaleString()}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* 回本進度條 */}
+          <div style={{ marginBottom: 6 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+              <span style={{ fontSize: 11, color: C.sage }}>固定成本回本進度</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: C.gold }}>{Math.round(s.coverRate * 100)}%</span>
             </div>
-            <div style={{ padding: "12px 0", borderTop: `1px solid ${C.border}` }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: C.ivory }}>本月利潤</span>
-                <span style={{ fontSize: 20, fontWeight: 700, fontFamily: "Georgia,serif", color: summary.profit >= 0 ? C.green : C.red }}>
-                  {summary.profit >= 0 ? "+" : ""}${Number(summary.profit).toLocaleString()}
+            <div style={{ height: 8, background: C.mid, borderRadius: 4, overflow: "hidden" }}>
+              <div style={{ height: "100%", width: `${Math.round(s.coverRate * 100)}%`, background: s.coverRate >= 1 ? C.green : C.gold, borderRadius: 4, transition: "width 0.4s" }} />
+            </div>
+            <div style={{ marginTop: 5, fontSize: 11, color: C.sage, textAlign: "right" }}>
+              {s.netProfit >= 0
+                ? `✅ 已回本，本月淨賺 $${s.netProfit.toLocaleString()}`
+                : `還差 $${Math.abs(s.netProfit).toLocaleString()} 才打平`}
+            </div>
+          </div>
+        </div>
+
+        {/* 訂單利潤明細 */}
+        <Sec title={`💰 訂單利潤明細（${s.orderCount} 筆）`} accent={C.green}>
+          {s.orderDetails.length === 0
+            ? <div style={{ color: C.sage, fontSize: 13 }}>本月尚無訂單</div>
+            : s.orderDetails.map((o, i) => (
+              <div key={i} style={{ padding: "8px 0", borderBottom: `1px solid ${C.border}` }}>
+                <div style={{ fontSize: 12, color: C.ivory, fontWeight: 600, marginBottom: 4 }}>{o.name}</div>
+                <div style={{ display: "flex", gap: 12 }}>
+                  <span style={{ fontSize: 11, color: C.sage }}>公司費 <span style={{ color: C.blue, fontWeight: 700 }}>${o.companyFee.toLocaleString()}</span></span>
+                  <span style={{ fontSize: 11, color: C.sage }}>利潤 <span style={{ color: C.green, fontWeight: 700 }}>${o.profit.toLocaleString()}</span></span>
+                  <span style={{ fontSize: 11, color: C.sage }}>售價 <span style={{ color: C.gold, fontWeight: 700 }}>${o.actual.toLocaleString()}</span></span>
+                </div>
+              </div>
+            ))}
+          <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 8 }}>
+            <span style={{ fontSize: 12, color: C.sage }}>合計貢獻</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: C.green, fontFamily: "Georgia,serif" }}>${s.totalContribution.toLocaleString()}</span>
+          </div>
+        </Sec>
+
+        {/* 固定成本明細 */}
+        <Sec title="🏢 固定成本明細" accent={C.red}>
+          <Row label="基本固定成本（月）" value={`$${s.baseCost.toLocaleString()}`} color={C.red} />
+          {s.extraItems.map((item, i) => (
+            <Row key={i} label={item.name} value={`$${item.amount.toLocaleString()}`} color={C.red} />
+          ))}
+          <Row label="固定成本合計" value={`$${s.totalCost.toLocaleString()}`} color={C.red} bold />
+        </Sec>
+
+        {/* 待收付 */}
+        {(s.pendingIn > 0 || s.pendingOut > 0) && (
+          <Sec title="⏳ 待收 / 待付">
+            {s.pendingList.map((p, i) => (
+              <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderBottom: `1px solid ${C.border}` }}>
+                <span style={{ fontSize: 12, color: C.ivory }}>{p.name}</span>
+                <span style={{ fontSize: 12, fontWeight: 700, color: p.type === "收" ? C.green : C.red, fontFamily: "Georgia,serif" }}>
+                  {p.type === "收" ? "+" : "-"}${Number(p.amount).toLocaleString()}
                 </span>
               </div>
+            ))}
+            <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+              {s.pendingIn > 0 && <div style={{ flex: 1, textAlign: "center", background: C.green+"15", borderRadius: 8, padding: "8px" }}>
+                <div style={{ fontSize: 9, color: C.sage }}>待收</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: C.green, fontFamily: "Georgia,serif" }}>${s.pendingIn.toLocaleString()}</div>
+              </div>}
+              {s.pendingOut > 0 && <div style={{ flex: 1, textAlign: "center", background: C.red+"15", borderRadius: 8, padding: "8px" }}>
+                <div style={{ fontSize: 9, color: C.sage }}>待付</div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: C.red, fontFamily: "Georgia,serif" }}>${s.pendingOut.toLocaleString()}</div>
+              </div>}
             </div>
           </Sec>
+        )}
 
-          {/* 待收尾款 */}
-          {summary.pendingIn > 0 && (
-            <Sec title="⏳ 待收款">
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                <span style={{ fontSize: 12, color: C.sage }}>合計待收</span>
-                <span style={{ fontSize: 18, fontWeight: 700, color: C.gold, fontFamily: "Georgia,serif" }}>${Number(summary.pendingIn).toLocaleString()}</span>
-              </div>
-              {summary.pendingList.filter(p => p.type === "收").map((p, i) => (
-                <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderTop: `1px solid ${C.border}` }}>
-                  <span style={{ fontSize: 12, color: C.ivory }}>{p.name}</span>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: C.gold, fontFamily: "Georgia,serif" }}>${Number(p.amount).toLocaleString()}</span>
-                </div>
-              ))}
-            </Sec>
-          )}
-
-          {/* 待付款 */}
-          {summary.pendingOut > 0 && (
-            <Sec title="⏳ 待付款">
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                <span style={{ fontSize: 12, color: C.sage }}>合計待付</span>
-                <span style={{ fontSize: 18, fontWeight: 700, color: C.red, fontFamily: "Georgia,serif" }}>${Number(summary.pendingOut).toLocaleString()}</span>
-              </div>
-              {summary.pendingList.filter(p => p.type === "付").map((p, i) => (
-                <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderTop: `1px solid ${C.border}` }}>
-                  <span style={{ fontSize: 12, color: C.ivory }}>{p.name}</span>
-                  <span style={{ fontSize: 12, fontWeight: 700, color: C.red, fontFamily: "Georgia,serif" }}>${Number(p.amount).toLocaleString()}</span>
-                </div>
-              ))}
-            </Sec>
-          )}
-
-          {summary.pendingIn === 0 && summary.pendingOut === 0 && (
-            <div style={{ textAlign: "center", color: C.sage, fontSize: 13, padding: "20px 0" }}>✅ 本月無待收/待付款項</div>
-          )}
-        </>
-      )}
+      </>)}
 
       {/* 工資月結 */}
       <WageSettlement month={month} />

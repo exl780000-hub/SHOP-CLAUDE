@@ -7,7 +7,7 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ success: false, error: "Method not allowed" });
 
   try {
-    const { customer, cards, measurements, shirtMeasurements, measNote, deposit, totalActual, totalSuggested, stylePhotoUrls, bodyPhotoUrls } = req.body;
+    const { customer, cards, measurements, shirtMeasurements, measNote, deposit, totalActual, totalSuggested, totalCompanyFee, totalProfit, totalGongben, totalFabric, totalBuSun, stylePhotoUrls, bodyPhotoUrls } = req.body;
 
     // 1. 找/建客戶
     let customerId = null;
@@ -55,6 +55,11 @@ export default async function handler(req, res) {
       "經理費": prop.number(wages.manager),
       "師傅工資合計": prop.number(wages.total),
       "卡片數量": prop.number(cards.length),
+      "公司費": prop.number(totalCompanyFee || 0),
+      "訂單利潤": prop.number(totalProfit || 0),
+      "工本費": prop.number(totalGongben || 0),
+      "布料總價": prop.number(totalFabric || 0),
+      "布損": prop.number(totalBuSun || 0),
       "樣式明細": prop.text(JSON.stringify(cards).slice(0, 2000)),
       "外套樣式": prop.text(styleTexts.外套樣式),
       "褲子樣式": prop.text(styleTexts.褲子樣式),
