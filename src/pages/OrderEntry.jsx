@@ -14,13 +14,15 @@ const DEF_YARDS = { "二件式":3.2, "三件式":4.0, "外套":2.5, "褲子":1.4
 
 function buSun(f) {
   if(f<=4000) return 0;
-  const rate = Math.ceil((f - 4000) / 1000) * 0.05;
+  const bracket = Math.ceil((f - 4000) / 1000);
+  // 前10級每級+5%（到50%），之後每級+3%
+  const rate = bracket <= 10 ? bracket * 0.05 : 0.50 + (bracket - 10) * 0.03;
   return Math.round(f * rate);
 }
 function profitRate(f, shirt) {
   if(shirt){if(f<=800)return 0.55;if(f<=1500)return 0.70;if(f<=2000)return 0.75;if(f<=2500)return 0.80;return 0.85;}
-  if(f<=4000)return 0;if(f<=6000)return 0.05;if(f<=10000)return 0.08;if(f<=16000)return 0.14;
-  if(f<=20000)return 0.20;if(f<=26000)return 0.25;return 0.30;
+  if(f<=4000)return 0;if(f<=6000)return 0.04;if(f<=10000)return 0.08;if(f<=13000)return 0.12;
+  if(f<=16000)return 0.14;if(f<=20000)return 0.18;if(f<=28000)return 0.22;return 0.26;
 }
 
 function calcCard(card) {
