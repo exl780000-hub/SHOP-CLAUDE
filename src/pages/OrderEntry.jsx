@@ -558,29 +558,19 @@ export default function OrderEntry() {
     return cardIndexMap[card.type];
   };
 
-  const canNext = [
-    customer.name && customer.phone,
-    cards.length>0,
-    true, true,
-  ][step];
-
   return (
     <div style={{background:C.bg, color:C.ivory, fontFamily:"-apple-system,'Segoe UI',sans-serif"}}>
       {/* Step Bar — 步驟2-4可自由切換 */}
       <div style={{display:"flex", background:C.card, borderBottom:`1px solid ${C.border}`}}>
-        {STEPS.map((s,i)=>{
-          const customerReady = customer.name && customer.phone;
-          const clickable = i === 0 || customerReady;
-          return (
-            <button key={s} onClick={()=>{ if(clickable) setStep(i); }} style={{
-              flex:1, cursor:clickable?"pointer":"default", background:"none", border:"none",
-              padding:"11px 4px", borderBottom:`2px solid ${step===i?C.gold:"transparent"}`,
-              color:step===i?C.gold:clickable?C.sage:C.border, fontSize:11, fontWeight:700,
-            }}>
-              <div style={{fontSize:14, marginBottom:1}}>{"①②③④"[i]}</div>{s}
-            </button>
-          );
-        })}
+        {STEPS.map((s,i)=>(
+          <button key={s} onClick={()=>setStep(i)} style={{
+            flex:1, cursor:"pointer", background:"none", border:"none",
+            padding:"11px 4px", borderBottom:`2px solid ${step===i?C.gold:"transparent"}`,
+            color:step===i?C.gold:C.sage, fontSize:11, fontWeight:700,
+          }}>
+            <div style={{fontSize:14, marginBottom:1}}>{"①②③④"[i]}</div>{s}
+          </button>
+        ))}
       </div>
 
       <div style={{maxWidth:520, margin:"0 auto", padding:"14px 14px 110px"}}>
@@ -603,12 +593,6 @@ export default function OrderEntry() {
                   {["介紹","自來","社群","網頁","其他"].map(s=><Chip key={s} label={s} active={customer.source===s} onClick={()=>setCustomer(p=>({...p,source:s}))} />)}
                 </div>
               </div>
-              <PhotoUpload
-                label="款式參考圖（客戶提供）"
-                photos={stylePhotos}
-                onAdd={url => setStylePhotos(p=>[...p, url])}
-                onRemove={i => setStylePhotos(p=>p.filter((_,j)=>j!==i))}
-              />
             </div>
           </Sec>
         )}
@@ -670,6 +654,16 @@ export default function OrderEntry() {
               }}>
                 <span style={{fontSize:18}}>+</span> 新增品項
               </button>
+            )}
+            {cards.length > 0 && (
+              <Sec title="📸 款式參考圖" style={{marginTop:12}}>
+                <PhotoUpload
+                  label="上傳客戶提供的款式照片"
+                  photos={stylePhotos}
+                  onAdd={url => setStylePhotos(p=>[...p, url])}
+                  onRemove={i => setStylePhotos(p=>p.filter((_,j)=>j!==i))}
+                />
+              </Sec>
             )}
           </>
         )}
@@ -801,10 +795,18 @@ export default function OrderEntry() {
                 )}
               </div>
             )}
-            <button onClick={handleSubmit} disabled={submitting} style={{
+            {(!customer.name || !customer.phone) && (
+              <div style={{marginBottom:10, padding:"10px 14px", background:C.gold+"18", border:`1px solid ${C.gold}44`, borderRadius:8, fontSize:12, color:C.gold}}>
+                ⚠️ 請先填寫客戶姓名與手機（①客戶頁面）才可建立訂單
+              </div>
+            )}
+            <button onClick={handleSubmit} disabled={submitting || !customer.name || !customer.phone || cards.length===0} style={{
               width:"100%", padding:"15px", borderRadius:12, border:"none",
-              background:submitting?C.mid:C.gold, color:submitting?C.sage:C.bg,
-              fontSize:15, fontWeight:700, cursor:submitting?"default":"pointer", letterSpacing:"0.05em"
+              background:(submitting||!customer.name||!customer.phone||cards.length===0)?C.mid:C.gold,
+              color:(submitting||!customer.name||!customer.phone||cards.length===0)?C.border:C.bg,
+              fontSize:15, fontWeight:700,
+              cursor:(submitting||!customer.name||!customer.phone||cards.length===0)?"default":"pointer",
+              letterSpacing:"0.05em"
             }}>
               {submitting?"⏳ 建立中...":"✦ 確認建立訂單"}
             </button>
@@ -818,10 +820,10 @@ export default function OrderEntry() {
           <button onClick={()=>setStep(p=>p-1)} style={{flex:1, padding:"12px", borderRadius:10, border:`1px solid ${C.border}`, background:"transparent", color:C.sage, fontSize:14, fontWeight:700, cursor:"pointer"}}>← 上一步</button>
         )}
         {step<3 && (
-          <button onClick={()=>canNext&&setStep(p=>p+1)} style={{
+          <button onClick={()=>setStep(p=>p+1)} style={{
             flex:2, padding:"12px", borderRadius:10, border:"none",
-            background:canNext?C.gold:C.mid, color:canNext?C.bg:C.border,
-            fontSize:14, fontWeight:700, cursor:canNext?"pointer":"default",
+            background:C.gold, color:C.bg,
+            fontSize:14, fontWeight:700, cursor:"pointer",
           }}>下一步 →</button>
         )}
       </div>
