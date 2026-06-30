@@ -17,7 +17,7 @@ function buSun(f) {
   const bracket = Math.ceil((f - 4000) / 1000);
   // 前10級每級+5%（到50%），之後每級+3%
   const rate = bracket <= 10 ? bracket * 0.05 : 0.50 + (bracket - 10) * 0.03;
-  return Math.round(f * rate);
+  return Math.round(f * Math.min(rate, 0.70));
 }
 function profitRate(f, shirt) {
   if(shirt){if(f<=800)return 0.55;if(f<=1500)return 0.70;if(f<=2000)return 0.75;if(f<=2500)return 0.80;return 0.85;}
