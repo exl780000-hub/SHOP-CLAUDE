@@ -332,6 +332,7 @@ function Expense() {
 
 // ─── 主頁面（頁籤切換）────────────────────────────────────────────────────────
 export default function QuickExpense() {
+  const C = useTheme();
   const [tab, setTab] = useState("expense");
 
   return (
