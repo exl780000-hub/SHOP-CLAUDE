@@ -46,7 +46,8 @@ export default async function handler(req, res) {
         );
 
         if (allDone) {
-          await updatePage(orderId, { "流程": prop.select(group.target) });
+          const today = new Date().toISOString().slice(0, 10);
+          await updatePage(orderId, { "流程": prop.select(group.target), "流程更新時間": prop.date(today) });
           flowAdvanced = group.target;
         }
       }

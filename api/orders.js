@@ -30,6 +30,7 @@ export default async function handler(req, res) {
         items: getText("品項"),
         status: getText("訂單狀態"),
         flow: getText("流程"),
+        flowUpdatedAt: getText("流程更新時間"),
         date: getText("訂單日期"),
         actualPrice: getText("實際售價"),
         suggestedPrice: getText("建議售價"),

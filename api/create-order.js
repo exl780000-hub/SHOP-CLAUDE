@@ -45,6 +45,7 @@ export default async function handler(req, res) {
       "品項": prop.multiSelect(itemTypes),
       "訂單狀態": prop.select("✅ 訂單成立"),
       "流程": prop.select("📐 打版"),
+      "流程更新時間": prop.date(today),
       "訂單日期": prop.date(today),
       "實際售價": prop.number(totalActual),
       "建議售價": prop.number(totalSuggested),

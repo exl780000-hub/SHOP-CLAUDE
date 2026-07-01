@@ -8,7 +8,10 @@ export default async function handler(req, res) {
   try {
     const { orderId, flow, status, jacketWage, trouserWage, managerFee } = req.body;
     const props = {};
-    if (flow)   props["流程"]     = prop.select(flow);
+    if (flow) {
+      props["流程"] = prop.select(flow);
+      props["流程更新時間"] = prop.date(new Date().toISOString().slice(0, 10));
+    }
     if (status) props["訂單狀態"] = prop.select(status);
     if (jacketWage  != null) props["外套工資"] = prop.number(Number(jacketWage));
     if (trouserWage != null) props["褲子工資"] = prop.number(Number(trouserWage));

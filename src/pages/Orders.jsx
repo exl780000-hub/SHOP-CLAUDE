@@ -19,6 +19,23 @@ const FLOW_COLOR_FIXED = {
 
 const FILTER_OPTS = ["全部", "進行中", "已完成"];
 
+function daysSince(dateStr) {
+  if (!dateStr) return null;
+  const ms = Date.now() - new Date(dateStr + "T00:00:00").getTime();
+  return Math.floor(ms / 86400000);
+}
+
+function StuckBadge({ days, C }) {
+  if (days == null || days < 3) return null;
+  const color = days >= 5 ? C.red : C.gold;
+  return (
+    <span style={{
+      fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 10,
+      background: color + "22", color, border: `1px solid ${color}55`,
+    }}>⏱ 已卡 {days} 天</span>
+  );
+}
+
 export default function Orders() {
   const C = useTheme();
   const flowColor = (f) => FLOW_COLOR_FIXED[f] || C.gold;
@@ -244,6 +261,7 @@ export default function Orders() {
         const balance = (o.actualPrice || 0) - (o.deposit || 0);
         const meas = measurement[o.id];
         const measLoading = loadingMeas[o.id];
+        const stuckDays = o.flow !== "🎉 完成訂單" ? daysSince(o.flowUpdatedAt) : null;
 
         return (
           <div key={o.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, marginBottom: 10, overflow: "hidden" }}>
@@ -266,6 +284,7 @@ export default function Orders() {
                   </div>
                 ) : null}
                 <div style={{ fontSize: 11, fontWeight: 700, color: fc, marginTop: 3 }}>{o.flow || o.status}</div>
+                {stuckDays != null && <div style={{ marginTop: 4 }}><StuckBadge days={stuckDays} C={C} /></div>}
               </div>
             </div>
 

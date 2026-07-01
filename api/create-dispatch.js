@@ -75,7 +75,8 @@ export default async function handler(req, res) {
     const flowTarget = DISPATCH_FLOW[dispatchType];
     if (flowTarget && orderId) {
       try {
-        await updatePage(orderId, { "流程": prop.select(flowTarget) });
+        const today = new Date().toISOString().slice(0, 10);
+        await updatePage(orderId, { "流程": prop.select(flowTarget), "流程更新時間": prop.date(today) });
       } catch (e) {
         console.warn("update order flow failed:", e.message);
       }

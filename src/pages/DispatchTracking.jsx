@@ -35,6 +35,12 @@ function isOverdue(deadline) {
   return deadline && deadline < TODAY;
 }
 
+function daysSince(dateStr) {
+  if (!dateStr) return null;
+  const ms = Date.now() - new Date(dateStr + "T00:00:00").getTime();
+  return Math.floor(ms / 86400000);
+}
+
 export default function DispatchTracking() {
   const C = useTheme();
   const navigate = useNavigate();
@@ -177,6 +183,7 @@ export default function DispatchTracking() {
           {needsDispatch.map(o => {
             const needed = FLOW_NEEDED[o.flow] || [];
             const fc = FLOW_COLOR[o.flow] || C.sage;
+            const stuck = daysSince(o.flowUpdatedAt);
             return (
               <div key={o.id} style={{
                 background: C.card, border: `1px solid ${C.border}`,
@@ -191,6 +198,7 @@ export default function DispatchTracking() {
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
                       <Tag color={fc}>{o.flow}</Tag>
                       {o.items && <Tag color={C.sage}>{o.items}</Tag>}
+                      {stuck != null && stuck >= 3 && <Tag color={stuck >= 5 ? C.red : C.gold}>⏱ 已卡 {stuck} 天</Tag>}
                     </div>
                     <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 4 }}>
                       <span style={{ fontSize: 10, color: C.sage }}>需建立：</span>
