@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTheme } from "../theme.jsx";
 
 // ─── Pricing ──────────────────────────────────────────────────────────────────
@@ -493,6 +493,7 @@ export default function OrderEntry() {
   const C = useTheme();
   const [step, setStep] = useState(0);
   const [customer, setCustomer] = useState({name:"",phone:"",gender:"",source:""});
+  const [customerHistory, setCustomerHistory] = useState(null);
   const [cards, setCards] = useState([]);
   const [showPicker, setShowPicker] = useState(false);
   const [meas, setMeas] = useState(()=>Object.fromEntries(ALL_MEAS.map(f=>[f,""])));
@@ -504,6 +505,16 @@ export default function OrderEntry() {
   const [deposit, setDeposit] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitResult, setSubmitResult] = useState(null);
+
+  useEffect(() => {
+    if (customer.phone.length < 8) { setCustomerHistory(null); return; }
+    let cancelled = false;
+    fetch(`/api/customer-history?phone=${encodeURIComponent(customer.phone)}`)
+      .then(r => r.json())
+      .then(d => { if (!cancelled && d.success) setCustomerHistory(d.isReturning ? d : null); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [customer.phone]);
 
   const COMPANY_FEE_MAP = { "二件式":9800, "三件式":9800, "外套":7350, "褲子":2450, "背心":2450, "襯衫":0 };
 
@@ -596,6 +607,24 @@ export default function OrderEntry() {
             <div style={{display:"flex", flexDirection:"column", gap:12}}>
               <TxtIn label="姓名 *" value={customer.name} onChange={v=>setCustomer(p=>({...p,name:v}))} placeholder="客戶姓名" />
               <TxtIn label="手機 *" type="tel" value={customer.phone} onChange={v=>setCustomer(p=>({...p,phone:v.replace(/\D/g,"").slice(0,10)}))} placeholder="0912-345-678" />
+              {customerHistory && (
+                <div style={{background:C.gold+"18", border:`1px solid ${C.gold}44`, borderRadius:10, padding:"10px 12px"}}>
+                  <div style={{fontSize:12, fontWeight:700, color:C.gold, marginBottom:6}}>
+                    👤 舊客戶（曾訂購 {customerHistory.orderCount} 筆）
+                  </div>
+                  {customerHistory.pastOrders.slice(0,3).map((o,i)=>(
+                    <div key={i} style={{fontSize:11, color:C.sage, marginBottom:2}}>
+                      {o.date}　{o.items}
+                    </div>
+                  ))}
+                  {customerHistory.latestMeasurement && (
+                    <div style={{fontSize:11, color:C.sage, marginTop:6, paddingTop:6, borderTop:`1px solid ${C.gold}33`}}>
+                      上次量身：{customerHistory.latestMeasurement.date}
+                      {customerHistory.latestMeasurement.traits && `｜${customerHistory.latestMeasurement.traits.replace(/\n/g,"、")}`}
+                    </div>
+                  )}
+                </div>
+              )}
               <div>
                 <Lbl>性別</Lbl>
                 <div style={{display:"flex", gap:8}}>

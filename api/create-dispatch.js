@@ -22,8 +22,11 @@ export default async function handler(req, res) {
     let finalContent = content || "";
     let referencePhotos = [];
 
-    // 打版單：自動附上量身資料、體型特徵、款式/體型照片
+    // 打版單：自動附上量身資料、體型特徵、款式/體型照片、客戶歷史量身紀錄
     if (dispatchType === "📐 打版單" && orderId) {
+      let currentMeasId = null;
+      let customerId = null;
+
       try {
         const measResult = await queryDatabase(DB.measurement, {
           property: "訂單",
@@ -31,6 +34,7 @@ export default async function handler(req, res) {
         });
         if (measResult.results.length > 0) {
           const measPage = measResult.results[0];
+          currentMeasId = measPage.id;
           const measText = measPage.properties["量身資料"]?.rich_text?.[0]?.plain_text || "";
           const traitsText = measPage.properties["體型特徵"]?.rich_text?.[0]?.plain_text || "";
           const measNote = measPage.properties["體型備註"]?.rich_text?.[0]?.plain_text || "";
@@ -47,6 +51,7 @@ export default async function handler(req, res) {
 
       try {
         const orderPage = await getPage(orderId);
+        customerId = orderPage.properties["客戶"]?.relation?.[0]?.id || null;
         const stylePhotoText = orderPage.properties["款式參考圖"]?.rich_text?.[0]?.plain_text || "";
         const bodyPhotoText = orderPage.properties["身材照片"]?.rich_text?.[0]?.plain_text || "";
         referencePhotos = [
@@ -55,6 +60,31 @@ export default async function handler(req, res) {
         ];
       } catch (e) {
         console.warn("fetch order photos failed:", e.message);
+      }
+
+      // 客戶是回頭客：找出這位客戶最近一筆「不是這次訂單」的量身紀錄
+      if (customerId) {
+        try {
+          const historyResult = await queryDatabase(DB.measurement, {
+            property: "客戶",
+            relation: { contains: customerId },
+          });
+          const prior = historyResult.results
+            .filter(p => p.id !== currentMeasId)
+            .sort((a, b) => (b.properties["量身日期"]?.date?.start || "").localeCompare(a.properties["量身日期"]?.date?.start || ""))[0];
+          if (prior) {
+            const priorDate = prior.properties["量身日期"]?.date?.start || "";
+            const priorMeas = prior.properties["量身資料"]?.rich_text?.[0]?.plain_text || "";
+            const priorTraits = prior.properties["體型特徵"]?.rich_text?.[0]?.plain_text || "";
+            const priorNote = prior.properties["體型備註"]?.rich_text?.[0]?.plain_text || "";
+            finalContent += `\n\n【🔁 歷史量身紀錄（上次 ${priorDate}）】` +
+              (priorMeas ? `\n${priorMeas}` : "") +
+              (priorTraits ? `\n體型特徵：${priorTraits}` : "") +
+              (priorNote ? `\n體型備註：${priorNote}` : "");
+          }
+        } catch (e) {
+          console.warn("fetch measurement history failed:", e.message);
+        }
       }
     }
 
