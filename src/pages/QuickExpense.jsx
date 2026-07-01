@@ -8,6 +8,16 @@ function monthStr(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
+function Btn({ label, active, onClick, C }) {
+  return (
+    <button onClick={onClick} style={{
+      cursor: "pointer", borderRadius: 8, fontSize: 14, fontWeight: 600, padding: "12px 8px", flex: 1,
+      border: `1px solid ${active ? C.gold : C.border}`,
+      background: active ? C.gold + "22" : C.mid, color: active ? C.gold : C.sage,
+    }}>{label}</button>
+  );
+}
+
 function Sec({ title, accent, children }) {
   const C = useTheme();
   return (
@@ -306,26 +316,19 @@ function Expense() {
   };
 
 
-  const Btn = ({ label, active, onClick }) => (
-    <button onClick={onClick} style={{
-      cursor: "pointer", borderRadius: 8, fontSize: 14, fontWeight: 600, padding: "12px 8px", flex: 1,
-      border: `1px solid ${active ? C.gold : C.border}`,
-      background: active ? C.gold + "22" : C.mid, color: active ? C.gold : C.sage,
-    }}>{label}</button>
-  );
 
   return (
     <div style={{ maxWidth: 520, margin: "0 auto", padding: "14px 14px 80px" }}>
       <Sec title="💰 收支類型">
         <div style={{ display: "flex", gap: 8 }}>
-          <Btn label="💸 支出" active={type === "💸 支出"} onClick={() => setType("💸 支出")} />
-          <Btn label="💵 收入" active={type === "💵 收入"} onClick={() => setType("💵 收入")} />
+          <Btn label="💸 支出" active={type === "💸 支出"} onClick={() => setType("💸 支出")} C={C} />
+          <Btn label="💵 收入" active={type === "💵 收入"} onClick={() => setType("💵 收入")} C={C} />
         </div>
       </Sec>
 
       <Sec title="🏦 帳戶">
         <div style={{ display: "flex", gap: 8 }}>
-          {ACCOUNTS.map(a => <Btn key={a} label={a} active={account === a} onClick={() => setAccount(a)} />)}
+          {ACCOUNTS.map(a => <Btn key={a} label={a} active={account === a} onClick={() => setAccount(a)} C={C} />)}
         </div>
       </Sec>
 
