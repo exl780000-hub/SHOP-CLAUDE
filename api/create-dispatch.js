@@ -1,4 +1,4 @@
-import { DB, queryDatabase, createPage, updatePage, prop, cors } from "./_notion.js";
+import { DB, queryDatabase, createPage, updatePage, getPage, prop, cors } from "./_notion.js";
 
 // 建立派工單時對應的訂單流程狀態
 const DISPATCH_FLOW = {
@@ -20,8 +20,9 @@ export default async function handler(req, res) {
     const { orderId, orderName, dispatchType, tailor, deadline, content } = req.body;
 
     let finalContent = content || "";
+    let referencePhotos = [];
 
-    // 打版單：自動附上量身資料
+    // 打版單：自動附上量身資料、體型特徵、款式/體型照片
     if (dispatchType === "📐 打版單" && orderId) {
       try {
         const measResult = await queryDatabase(DB.measurement, {
@@ -31,15 +32,29 @@ export default async function handler(req, res) {
         if (measResult.results.length > 0) {
           const measPage = measResult.results[0];
           const measText = measPage.properties["量身資料"]?.rich_text?.[0]?.plain_text || "";
+          const traitsText = measPage.properties["體型特徵"]?.rich_text?.[0]?.plain_text || "";
           const measNote = measPage.properties["體型備註"]?.rich_text?.[0]?.plain_text || "";
           const measBlock = [
             measText ? `\n\n【量身尺寸】\n${measText}` : "",
+            traitsText ? `\n\n【體型特徵】\n${traitsText}` : "",
             measNote ? `\n\n【體型備註】\n${measNote}` : "",
           ].join("");
           finalContent = finalContent + measBlock;
         }
       } catch (e) {
         console.warn("fetch measurement failed:", e.message);
+      }
+
+      try {
+        const orderPage = await getPage(orderId);
+        const stylePhotoText = orderPage.properties["款式參考圖"]?.rich_text?.[0]?.plain_text || "";
+        const bodyPhotoText = orderPage.properties["身材照片"]?.rich_text?.[0]?.plain_text || "";
+        referencePhotos = [
+          ...(stylePhotoText ? stylePhotoText.split("\n").filter(Boolean) : []),
+          ...(bodyPhotoText ? bodyPhotoText.split("\n").filter(Boolean) : []),
+        ];
+      } catch (e) {
+        console.warn("fetch order photos failed:", e.message);
       }
     }
 
@@ -51,6 +66,7 @@ export default async function handler(req, res) {
       "狀態": prop.select("⏳ 待完成"),
       ...(deadline ? { "完成期限": prop.date(deadline) } : {}),
       ...(finalContent ? { "備註": prop.text(finalContent.slice(0, 2000)) } : {}),
+      ...(referencePhotos.length ? { "參考照片": prop.files(referencePhotos) } : {}),
     };
 
     const dispatch = await createPage(DB.dispatch, dispatchProps);

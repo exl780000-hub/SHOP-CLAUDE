@@ -44,6 +44,10 @@ export async function createPage(databaseId, properties) {
   });
 }
 
+export async function getPage(pageId) {
+  return notionFetch(`pages/${pageId}`, { method: "GET" });
+}
+
 export async function updatePage(pageId, properties) {
   return notionFetch(`pages/${pageId}`, {
     method: "PATCH",
@@ -63,6 +67,7 @@ export const prop = {
   checkbox: (b) => ({ checkbox: !!b }),
   relation: (ids) => ({ relation: (Array.isArray(ids) ? ids : [ids]).filter(Boolean).map(id => ({ id })) }),
   url: (u) => u ? ({ url: u }) : ({ url: null }),
+  files: (urls) => ({ files: (urls || []).filter(Boolean).map((u, i) => ({ type: "external", name: `photo-${i + 1}`, external: { url: u } })) }),
 };
 
 export function cors(res) {
