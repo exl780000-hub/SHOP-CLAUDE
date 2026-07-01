@@ -7,7 +7,7 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ success: false, error: "Method not allowed" });
 
   try {
-    const { customer, cards, measurements, shirtMeasurements, traits, measNote, deposit, totalActual, totalSuggested, totalCompanyFee, totalProfit, totalGongben, totalFabric, totalBuSun, stylePhotoUrls, bodyPhotoUrls } = req.body;
+    const { customer, cards, measurements, shirtMeasurements, traits, measNote, sizeNote, deposit, totalActual, totalSuggested, totalCompanyFee, totalProfit, totalGongben, totalFabric, totalBuSun, stylePhotoUrls, bodyPhotoUrls } = req.body;
 
     // 1. 找/建客戶
     let customerId = null;
@@ -97,6 +97,7 @@ export default async function handler(req, res) {
         : "";
       if (traitsText) measProps["體型特徵"] = prop.text(traitsText);
       if (measNote) measProps["體型備註"] = prop.text(measNote);
+      if (sizeNote) measProps["量身備註"] = prop.text(sizeNote);
       await createPage(DB.measurement, measProps);
     }
 

@@ -384,6 +384,18 @@ export default function Orders() {
                       {meas.data && (
                         <div style={{ fontSize: 12, color: C.ivory, whiteSpace: "pre-wrap", lineHeight: 1.8, fontFamily: "monospace" }}>{meas.data}</div>
                       )}
+                      {meas.sizeNote && (
+                        <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${C.border}` }}>
+                          <span style={{ fontSize: 11, color: C.sage }}>量身備註：</span>
+                          <span style={{ fontSize: 12, color: C.ivory }}>{meas.sizeNote}</span>
+                        </div>
+                      )}
+                      {meas.traits && (
+                        <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${C.border}` }}>
+                          <span style={{ fontSize: 11, color: C.sage }}>體型特徵：</span>
+                          <span style={{ fontSize: 12, color: C.ivory, whiteSpace: "pre-wrap" }}>{meas.traits}</span>
+                        </div>
+                      )}
                       {meas.note && (
                         <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${C.border}` }}>
                           <span style={{ fontSize: 11, color: C.sage }}>體型備註：</span>

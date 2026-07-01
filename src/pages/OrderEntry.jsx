@@ -163,13 +163,23 @@ function NumIn({label, value, onChange, unit="in"}) {
     </div>
   );
 }
+// 尺寸限制：最多 2 位整數 + 小數點後 1 位（例：99.9）
+function sanitizeSize(raw) {
+  let v = raw.replace(/[^0-9.]/g, "");
+  const firstDot = v.indexOf(".");
+  if (firstDot !== -1) v = v.slice(0, firstDot + 1) + v.slice(firstDot + 1).replace(/\./g, "");
+  const [intPart, decPart] = v.split(".");
+  let result = (intPart || "").slice(0, 2);
+  if (v.includes(".")) result += "." + (decPart || "").slice(0, 1);
+  return result;
+}
 function MeasCell({label, value, onChange}) {
   const C = useTheme();
   return (
     <div style={{display:"flex", flexDirection:"column", alignItems:"center", padding:"8px 4px",
       borderRight:`1px solid ${C.border}44`, borderBottom:`1px solid ${C.border}44`}}>
       <div style={{fontSize:10, color:C.sage, marginBottom:4, letterSpacing:"0.04em"}}>{label}</div>
-      <input type="number" value={value} onChange={e=>onChange(e.target.value)}
+      <input type="text" inputMode="decimal" value={value} onChange={e=>onChange(sanitizeSize(e.target.value))}
         placeholder="—"
         style={{width:"100%", background:"transparent", border:"none", borderBottom:`1px solid ${value?C.gold:C.border}`,
           color:value?C.gold:C.border, fontSize:15, fontWeight:700, outline:"none",
@@ -500,6 +510,7 @@ export default function OrderEntry() {
   const [shirtMeas, setShirtMeas] = useState(()=>Object.fromEntries(MEAS_SHIRT[0].fields.map(f=>[f,""])));
   const [traits, setTraits] = useState({});
   const [measNote, setMeasNote] = useState("");
+  const [sizeNote, setSizeNote] = useState("");
   const [stylePhotos, setStylePhotos] = useState([]);
   const [bodyPhotos, setBodyPhotos] = useState([]);
   const [deposit, setDeposit] = useState("");
@@ -534,6 +545,7 @@ export default function OrderEntry() {
         shirtMeasurements: shirtMeas,
         traits,
         measNote,
+        sizeNote,
         deposit,
         totalActual,
         totalSuggested,
@@ -732,6 +744,13 @@ export default function OrderEntry() {
                     <MeasCell key={f} label={f} value={shirtMeas[f]||""} onChange={v=>setShirtMeas(p=>({...p,[f]:v}))} />
                   ))}
                 </div>
+              </Sec>
+            )}
+
+            {(hasSuit || hasShirt) && (
+              <Sec title="📝 量身備註">
+                <textarea value={sizeNote} onChange={e=>setSizeNote(e.target.value)} placeholder="尺寸相關備註（例：量測時穿著厚外套、特殊量法...）"
+                  style={{width:"100%", boxSizing:"border-box", background:C.mid, border:`1px solid ${C.border}`, borderRadius:8, padding:"9px 12px", color:C.ivory, fontSize:12, outline:"none", resize:"vertical", minHeight:55}} />
               </Sec>
             )}
 
