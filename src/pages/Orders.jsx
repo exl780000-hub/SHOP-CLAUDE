@@ -1,24 +1,23 @@
 import { useState, useEffect } from "react";
 import { useTheme } from "../theme.jsx";
 
+// 與 create-order.js / create-dispatch.js / update-dispatch.js 實際寫入 Notion 的值一致
 const FLOW_STEPS = [
-  "📋 訂單建立",
-  "🧵 備料",
   "📐 打版",
-  "🪡 毛胚",
-  "👔 試穿",
-  "✂️ 製作中",
-  "🔧 修改",
-  "✅ 完成",
+  "🪡 製作毛胚",
+  "✂️ 開始製作",
+  "🧍 第二試身",
+  "🪢 最後縫製",
+  "🎉 完成訂單",
 ];
 
 const FLOW_COLOR_FIXED = {
-  "✅ 完成": "#5E9E6E",
-  "🔧 修改": "#E05252",
-  "✂️ 製作中": "#4A7AB5",
+  "🎉 完成訂單": "#5E9E6E",
+  "🪢 最後縫製": "#E05252",
+  "✂️ 開始製作": "#4A7AB5",
 };
 
-const FILTER_OPTS = ["全部", "進行中", "✅ 完成"];
+const FILTER_OPTS = ["全部", "進行中", "已完成"];
 
 export default function Orders() {
   const C = useTheme();
@@ -27,6 +26,11 @@ export default function Orders() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("全部");
+  const [showMore, setShowMore] = useState(false);
+  const [stageFilter, setStageFilter] = useState("全部");
+  const [itemFilter, setItemFilter] = useState("全部");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
   const [expanded, setExpanded] = useState(null);
   const [measurement, setMeasurement] = useState({});   // { [orderId]: { data, note } | null }
   const [loadingMeas, setLoadingMeas] = useState({});
@@ -107,9 +111,20 @@ export default function Orders() {
 
   const doSearch = () => load(search);
 
+  const itemOptions = [...new Set(orders.flatMap(o => (o.items || "").split("、").filter(Boolean)))];
+
+  const clearMoreFilters = () => {
+    setStageFilter("全部"); setItemFilter("全部"); setDateFrom(""); setDateTo("");
+  };
+  const moreFiltersActive = stageFilter !== "全部" || itemFilter !== "全部" || dateFrom || dateTo;
+
   const filtered = orders.filter(o => {
-    if (filter === "✅ 完成") return o.flow === "✅ 完成";
-    if (filter === "進行中") return o.flow !== "✅ 完成";
+    if (filter === "已完成" && o.flow !== "🎉 完成訂單") return false;
+    if (filter === "進行中" && o.flow === "🎉 完成訂單") return false;
+    if (stageFilter !== "全部" && o.flow !== stageFilter) return false;
+    if (itemFilter !== "全部" && !(o.items || "").includes(itemFilter)) return false;
+    if (dateFrom && o.date && o.date < dateFrom) return false;
+    if (dateTo && o.date && o.date > dateTo) return false;
     return true;
   });
 
@@ -148,7 +163,7 @@ export default function Orders() {
       </div>
 
       {/* 篩選 */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "center" }}>
         {FILTER_OPTS.map(f => (
           <button key={f} onClick={() => setFilter(f)} style={{
             cursor: "pointer", borderRadius: 8, fontSize: 12, fontWeight: 600, padding: "6px 14px",
@@ -157,14 +172,65 @@ export default function Orders() {
             color: filter === f ? C.gold : C.sage,
           }}>
             {f}
-            {f === "進行中" && orders.filter(o => o.flow !== "✅ 完成").length > 0 && (
+            {f === "進行中" && orders.filter(o => o.flow !== "🎉 完成訂單").length > 0 && (
               <span style={{ marginLeft: 5, background: C.gold, color: C.bg, borderRadius: 10, padding: "1px 6px", fontSize: 10, fontWeight: 700 }}>
-                {orders.filter(o => o.flow !== "✅ 完成").length}
+                {orders.filter(o => o.flow !== "🎉 完成訂單").length}
               </span>
             )}
           </button>
         ))}
+        <button onClick={() => setShowMore(v => !v)} style={{
+          marginLeft: "auto", cursor: "pointer", borderRadius: 8, fontSize: 12, fontWeight: 600, padding: "6px 12px",
+          border: `1px solid ${moreFiltersActive ? C.gold : C.border}`,
+          background: moreFiltersActive ? C.gold + "22" : "transparent",
+          color: moreFiltersActive ? C.gold : C.sage,
+        }}>🔍 進階篩選{moreFiltersActive ? " ●" : ""}</button>
       </div>
+
+      {/* 進階篩選 */}
+      {showMore && (
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
+          <div style={{ fontSize: 11, color: C.sage, fontWeight: 700, marginBottom: 6 }}>流程階段</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+            {["全部", ...FLOW_STEPS].map(s => (
+              <button key={s} onClick={() => setStageFilter(s)} style={{
+                cursor: "pointer", borderRadius: 6, fontSize: 11, fontWeight: 600, padding: "5px 10px",
+                border: `1px solid ${stageFilter === s ? C.gold : C.border}`,
+                background: stageFilter === s ? C.gold + "22" : C.mid,
+                color: stageFilter === s ? C.gold : C.sage,
+              }}>{s}</button>
+            ))}
+          </div>
+
+          <div style={{ fontSize: 11, color: C.sage, fontWeight: 700, marginBottom: 6 }}>品項</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+            {["全部", ...itemOptions].map(it => (
+              <button key={it} onClick={() => setItemFilter(it)} style={{
+                cursor: "pointer", borderRadius: 6, fontSize: 11, fontWeight: 600, padding: "5px 10px",
+                border: `1px solid ${itemFilter === it ? C.gold : C.border}`,
+                background: itemFilter === it ? C.gold + "22" : C.mid,
+                color: itemFilter === it ? C.gold : C.sage,
+              }}>{it}</button>
+            ))}
+          </div>
+
+          <div style={{ fontSize: 11, color: C.sage, fontWeight: 700, marginBottom: 6 }}>訂單日期區間</div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: moreFiltersActive ? 12 : 0 }}>
+            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+              style={{ flex: 1, background: C.mid, border: `1px solid ${C.border}`, borderRadius: 6, padding: "6px 8px", color: C.ivory, fontSize: 12, outline: "none" }} />
+            <span style={{ color: C.sage, fontSize: 12 }}>至</span>
+            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+              style={{ flex: 1, background: C.mid, border: `1px solid ${C.border}`, borderRadius: 6, padding: "6px 8px", color: C.ivory, fontSize: 12, outline: "none" }} />
+          </div>
+
+          {moreFiltersActive && (
+            <button onClick={clearMoreFilters} style={{
+              width: "100%", padding: "8px", borderRadius: 8, border: `1px solid ${C.border}`,
+              background: "transparent", color: C.sage, fontSize: 12, fontWeight: 600, cursor: "pointer",
+            }}>清除進階篩選</button>
+          )}
+        </div>
+      )}
 
       {loading && <div style={{ color: C.sage, textAlign: "center", padding: 30 }}>載入中...</div>}
 
