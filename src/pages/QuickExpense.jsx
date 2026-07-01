@@ -119,19 +119,58 @@ function WageSettlement({ month }) {
 }
 
 // ─── 月報表頁籤 ───────────────────────────────────────────────────────────────
+function TrendChart({ C, data }) {
+  if (!data || data.length === 0) return null;
+  const max = Math.max(1, ...data.flatMap(d => [d.totalCompanyFee, d.totalOrderProfit, d.totalCost]));
+  const Legend = ({ color, label }) => (
+    <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+      <span style={{ width: 8, height: 8, borderRadius: 2, background: color, display: "inline-block" }} />
+      <span style={{ fontSize: 10, color: C.sage }}>{label}</span>
+    </div>
+  );
+  return (
+    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 16px", marginBottom: 12 }}>
+      <div style={{ fontSize: 12, color: C.gold, fontWeight: 700, marginBottom: 10 }}>📈 近 {data.length} 個月趨勢</div>
+      <div style={{ display: "flex", gap: 14, marginBottom: 12 }}>
+        <Legend color={C.blue} label="公司費" />
+        <Legend color={C.green} label="利潤" />
+        <Legend color={C.red} label="固定成本" />
+      </div>
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 8, height: 120 }}>
+        {data.map(d => (
+          <div key={d.month} style={{ display: "flex", flexDirection: "column", alignItems: "center", flex: 1 }}>
+            <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 100 }}>
+              <div title="公司費" style={{ width: 7, height: `${Math.max(2, d.totalCompanyFee / max * 100)}%`, background: C.blue, borderRadius: "2px 2px 0 0" }} />
+              <div title="利潤" style={{ width: 7, height: `${Math.max(2, d.totalOrderProfit / max * 100)}%`, background: C.green, borderRadius: "2px 2px 0 0" }} />
+              <div title="固定成本" style={{ width: 7, height: `${Math.max(2, d.totalCost / max * 100)}%`, background: C.red + "99", borderRadius: "2px 2px 0 0" }} />
+            </div>
+            <div style={{ fontSize: 9, color: C.sage, marginTop: 4 }}>{d.month.slice(5)}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Dashboard() {
   const C = useTheme();
   const now = new Date();
   const [month, setMonth] = useState(monthStr(now));
   const [summary, setSummary] = useState(null);
+  const [trend, setTrend] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const load = async (m) => {
     setLoading(true);
     try {
-      const r = await fetch(`/api/finance-summary?month=${m}`);
+      const [r, rt] = await Promise.all([
+        fetch(`/api/finance-summary?month=${m}`),
+        fetch(`/api/finance-trend?month=${m}&months=6`),
+      ]);
       const d = await r.json();
       if (d.success) setSummary(d);
+      const dt = await rt.json();
+      if (dt.success) setTrend(dt.trend);
     } catch (e) { console.error(e); }
     setLoading(false);
   };
@@ -178,43 +217,39 @@ function Dashboard() {
 
       {!loading && s && (<>
 
-        {/* 月收益總覽 */}
-        <div style={{ background: C.card, border: `2px solid ${netColor}55`, borderRadius: 14, padding: "16px", marginBottom: 12 }}>
-          <div style={{ fontSize: 11, color: C.sage, fontWeight: 700, marginBottom: 10 }}>📊 本月損益</div>
-          <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-            {[
-              { label: "公司費貢獻", value: s.totalCompanyFee, color: C.blue },
-              { label: "訂單利潤", value: s.totalOrderProfit, color: C.green },
-              { label: "月收益", value: s.netProfit, color: netColor, signed: true },
-            ].map(({ label, value, color, signed }) => (
-              <div key={label} style={{ flex: 1, textAlign: "center", background: C.mid, borderRadius: 10, padding: "10px 4px" }}>
-                <div style={{ fontSize: 9, color: C.sage, marginBottom: 4 }}>{label}</div>
-                <div style={{ fontSize: 14, fontWeight: 700, color, fontFamily: "Georgia,serif" }}>
-                  {signed && value >= 0 ? "+" : ""}{value < 0 ? "-" : ""}${Math.abs(value).toLocaleString()}
-                </div>
+        {/* ① 公司費 vs 固定成本回本進度（不含利潤） */}
+        <Sec title="🏢 公司費回本進度" accent={C.blue}>
+          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+            <div style={{ flex: 1, textAlign: "center", background: C.mid, borderRadius: 10, padding: "10px 4px" }}>
+              <div style={{ fontSize: 9, color: C.sage, marginBottom: 4 }}>本月公司費</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: C.blue, fontFamily: "Georgia,serif" }}>${s.totalCompanyFee.toLocaleString()}</div>
+            </div>
+            <div style={{ flex: 1, textAlign: "center", background: C.mid, borderRadius: 10, padding: "10px 4px" }}>
+              <div style={{ fontSize: 9, color: C.sage, marginBottom: 4 }}>固定成本合計</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: C.red, fontFamily: "Georgia,serif" }}>${s.totalCost.toLocaleString()}</div>
+            </div>
+            <div style={{ flex: 1, textAlign: "center", background: C.mid, borderRadius: 10, padding: "10px 4px" }}>
+              <div style={{ fontSize: 9, color: C.sage, marginBottom: 4 }}>結餘</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: s.fixedCostBalance >= 0 ? C.green : C.red, fontFamily: "Georgia,serif" }}>
+                {s.fixedCostBalance >= 0 ? "+" : "-"}${Math.abs(s.fixedCostBalance).toLocaleString()}
               </div>
-            ))}
-          </div>
-
-          {/* 回本進度條 */}
-          <div style={{ marginBottom: 6 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
-              <span style={{ fontSize: 11, color: C.sage }}>固定成本回本進度</span>
-              <span style={{ fontSize: 11, fontWeight: 700, color: C.gold }}>{Math.round(s.coverRate * 100)}%</span>
-            </div>
-            <div style={{ height: 8, background: C.mid, borderRadius: 4, overflow: "hidden" }}>
-              <div style={{ height: "100%", width: `${Math.round(s.coverRate * 100)}%`, background: s.coverRate >= 1 ? C.green : C.gold, borderRadius: 4, transition: "width 0.4s" }} />
-            </div>
-            <div style={{ marginTop: 5, fontSize: 11, color: C.sage, textAlign: "right" }}>
-              {s.netProfit >= 0
-                ? `✅ 已回本，本月淨賺 $${s.netProfit.toLocaleString()}`
-                : `還差 $${Math.abs(s.netProfit).toLocaleString()} 才打平`}
             </div>
           </div>
-        </div>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+            <span style={{ fontSize: 11, color: C.sage }}>回本進度（只算公司費，不含利潤）</span>
+            <span style={{ fontSize: 11, fontWeight: 700, color: C.gold }}>{Math.round(s.coverRate * 100)}%</span>
+          </div>
+          <div style={{ height: 8, background: C.mid, borderRadius: 4, overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${Math.round(s.coverRate * 100)}%`, background: s.coverRate >= 1 ? C.green : C.gold, borderRadius: 4, transition: "width 0.4s" }} />
+          </div>
+        </Sec>
 
-        {/* 訂單利潤明細 */}
-        <Sec title={`💰 訂單利潤明細（${s.orderCount} 筆）`} accent={C.green}>
+        {/* ② 訂單利潤（獨立呈現，不併入回本進度） */}
+        <Sec title={`💰 訂單利潤（${s.orderCount} 筆，獨立於公司費）`} accent={C.green}>
+          <div style={{ textAlign: "center", marginBottom: s.orderDetails.length ? 12 : 0 }}>
+            <div style={{ fontSize: 9, color: C.sage, marginBottom: 4 }}>本月利潤合計</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: C.green, fontFamily: "Georgia,serif" }}>${s.totalOrderProfit.toLocaleString()}</div>
+          </div>
           {s.orderDetails.length === 0
             ? <div style={{ color: C.sage, fontSize: 13 }}>本月尚無訂單</div>
             : s.orderDetails.map((o, i) => (
@@ -227,13 +262,9 @@ function Dashboard() {
                 </div>
               </div>
             ))}
-          <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 8 }}>
-            <span style={{ fontSize: 12, color: C.sage }}>合計貢獻</span>
-            <span style={{ fontSize: 14, fontWeight: 700, color: C.green, fontFamily: "Georgia,serif" }}>${s.totalContribution.toLocaleString()}</span>
-          </div>
         </Sec>
 
-        {/* 固定成本明細 */}
+        {/* ③ 固定成本明細 */}
         <Sec title="🏢 固定成本明細" accent={C.red}>
           <Row label="基本固定成本（月）" value={`$${s.baseCost.toLocaleString()}`} color={C.red} />
           {s.extraItems.map((item, i) => (
@@ -241,6 +272,26 @@ function Dashboard() {
           ))}
           <Row label="固定成本合計" value={`$${s.totalCost.toLocaleString()}`} color={C.red} bold />
         </Sec>
+
+        {/* ④ 最終月收益（公司費結餘 + 利潤，最後才加總） */}
+        <div style={{ background: C.card, border: `2px solid ${netColor}55`, borderRadius: 14, padding: "16px", marginBottom: 12 }}>
+          <div style={{ fontSize: 11, color: C.sage, fontWeight: 700, marginBottom: 10 }}>📊 本月最終收益（公司費結餘 + 利潤）</div>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: 12, color: C.sage, marginBottom: 8 }}>
+            <span style={{ color: s.fixedCostBalance >= 0 ? C.green : C.red, fontWeight: 700 }}>
+              {s.fixedCostBalance >= 0 ? "+" : "-"}${Math.abs(s.fixedCostBalance).toLocaleString()}
+            </span>
+            <span>公司費結餘</span>
+            <span>+</span>
+            <span style={{ color: C.green, fontWeight: 700 }}>${s.totalOrderProfit.toLocaleString()}</span>
+            <span>利潤</span>
+          </div>
+          <div style={{ textAlign: "center", fontSize: 24, fontWeight: 800, color: netColor, fontFamily: "Georgia,serif" }}>
+            {s.netProfit >= 0 ? "+" : "-"}${Math.abs(s.netProfit).toLocaleString()}
+          </div>
+        </div>
+
+        {/* ⑤ 近 6 個月加總趨勢圖 */}
+        <TrendChart C={C} data={trend} />
 
         {/* 待收付 */}
         {(s.pendingIn > 0 || s.pendingOut > 0) && (
