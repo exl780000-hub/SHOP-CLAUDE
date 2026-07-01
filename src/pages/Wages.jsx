@@ -166,20 +166,20 @@ function JacketWageCard({ order, onSaved }) {
         </div>
 
         {/* 扣眼/米蘭眼 */}
-        <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
           {[
-            { label: "扣眼 (×80)", val: buttonholes, set: setButtonholes, checked: milan, checkLabel: null },
-            { label: "米蘭眼 (×100)", val: milanHoles, set: setMilanHoles },
-          ].map(({ label, val, set }) => (
-            <div key={label} style={{ flex: 1, background: C.mid, borderRadius: 8, padding: "8px 10px" }}>
-              <div style={{ fontSize: 11, color: C.sage, marginBottom: 4 }}>{label}</div>
-              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            { label: "扣眼 (×80)", val: buttonholes, set: setButtonholes, unit: 80 },
+            { label: "米蘭眼 (×100)", val: milanHoles, set: setMilanHoles, unit: 100 },
+          ].map(({ label, val, set, unit }) => (
+            <div key={label} style={{ background: C.mid, borderRadius: 8, padding: "8px 12px", display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ fontSize: 12, color: C.sage, flex: 1 }}>{label}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <input type="number" min="0" value={val} onChange={e => set(e.target.value)}
-                  style={{ flex: 1, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6,
-                    padding: "4px 8px", color: C.ivory, fontSize: 14, fontWeight: 700, outline: "none", textAlign: "center" }} />
+                  style={{ width: 64, background: "transparent", border: `1px solid ${C.border}`, borderRadius: 6,
+                    padding: "5px 8px", color: C.ivory, fontSize: 15, fontWeight: 700, outline: "none", textAlign: "center" }} />
                 <span style={{ fontSize: 11, color: C.sage }}>顆</span>
+                {Number(val) > 0 && <span style={{ fontSize: 11, color: C.gold }}>+{(Number(val) * unit).toLocaleString()}</span>}
               </div>
-              {Number(val) > 0 && <div style={{ fontSize: 10, color: C.gold, marginTop: 3 }}>+{(Number(val) * (label.includes("米蘭") ? 100 : 80)).toLocaleString()}</div>}
             </div>
           ))}
         </div>

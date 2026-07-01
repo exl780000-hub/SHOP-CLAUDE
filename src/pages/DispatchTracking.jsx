@@ -283,22 +283,12 @@ export default function DispatchTracking() {
                       {isEditing && (
                         <div style={{ padding: "0 14px 12px" }}>
                           <div style={{ background: C.mid, borderRadius: 8, padding: "10px 12px" }}>
-                            <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-                              <div style={{ flex: 1 }}>
-                                <div style={{ fontSize: 10, color: C.sage, marginBottom: 4 }}>送回日期</div>
-                                <input type="date" value={returnDate} onChange={e => setReturnDate(e.target.value)}
-                                  style={{ width: "100%", boxSizing: "border-box", background: C.card,
-                                    border: `1px solid ${C.border}`, borderRadius: 6,
-                                    padding: "7px 10px", color: C.ivory, fontSize: 13, outline: "none" }} />
-                              </div>
-                              <div style={{ flex: 1 }}>
-                                <div style={{ fontSize: 10, color: C.sage, marginBottom: 4 }}>工資（選填）</div>
-                                <input type="number" value={wage} onChange={e => setWage(e.target.value)}
-                                  placeholder="金額"
-                                  style={{ width: "100%", boxSizing: "border-box", background: C.card,
-                                    border: `1px solid ${C.border}`, borderRadius: 6,
-                                    padding: "7px 10px", color: C.ivory, fontSize: 13, outline: "none" }} />
-                              </div>
+                            <div style={{ marginBottom: 8 }}>
+                              <div style={{ fontSize: 10, color: C.sage, marginBottom: 4 }}>送回日期</div>
+                              <input type="date" value={returnDate} onChange={e => setReturnDate(e.target.value)}
+                                style={{ width: "100%", boxSizing: "border-box", background: C.card,
+                                  border: `1px solid ${C.border}`, borderRadius: 6,
+                                  padding: "7px 10px", color: C.ivory, fontSize: 13, outline: "none" }} />
                             </div>
                             <button onClick={() => markDone(d)} disabled={saving} style={{
                               width: "100%", background: saving ? C.mid : C.green,

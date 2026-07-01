@@ -8,6 +8,16 @@ function monthStr(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
+function Sec({ title, accent, children }) {
+  const C = useTheme();
+  return (
+    <div style={{ background: C.card, border: `1px solid ${accent || C.border}`, borderRadius: 12, padding: "16px 18px", marginBottom: 12 }}>
+      {title && <div style={{ fontSize: 12, color: accent || C.gold, fontWeight: 700, marginBottom: 12 }}>{title}</div>}
+      {children}
+    </div>
+  );
+}
+
 // ─── 工資月結區塊 ─────────────────────────────────────────────────────────────
 function WageSettlement({ month }) {
   const C = useTheme();
@@ -295,12 +305,6 @@ function Expense() {
     setSubmitting(false);
   };
 
-  const Sec = ({ title, children }) => (
-    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "16px 18px", marginBottom: 12 }}>
-      {title && <div style={{ fontSize: 12, color: C.gold, fontWeight: 700, marginBottom: 12 }}>{title}</div>}
-      {children}
-    </div>
-  );
 
   const Btn = ({ label, active, onClick }) => (
     <button onClick={onClick} style={{
