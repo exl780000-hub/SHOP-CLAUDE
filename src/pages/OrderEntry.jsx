@@ -870,6 +870,26 @@ export default function OrderEntry() {
         )}
       </div>
 
+      {/* 下一步：①②③步驟浮動於底部，仍可自由點上方頁籤切換 */}
+      {step<3 && (
+        <div style={{
+          position:"fixed", bottom:0, left:0, right:0, zIndex:20,
+          background:C.card, borderTop:`1px solid ${C.border}`, boxShadow:C.shadowPop,
+          padding:"12px 14px calc(12px + env(safe-area-inset-bottom))",
+        }}>
+          <div style={{maxWidth:520, margin:"0 auto"}}>
+            <button onClick={()=>setStep(s=>s+1)} style={{
+              width:"100%", padding:"14px", borderRadius:12, border:"none",
+              background:C.gold, color:C.bg, fontSize:14, fontWeight:700,
+              cursor:"pointer", letterSpacing:"0.05em",
+              display:"flex", alignItems:"center", justifyContent:"center", gap:6,
+            }}>
+              下一步：{STEPS[step+1]} →
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 建立訂單：浮動於底部，跟隨捲動，各裝置寬度自適應 */}
       {step===3 && (
         <div style={{
