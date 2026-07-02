@@ -870,16 +870,25 @@ export default function OrderEntry() {
         )}
       </div>
 
-      {/* 下一步：①②③步驟浮動於底部，仍可自由點上方頁籤切換 */}
+      {/* 上一步／下一步：浮動於底部，仍可自由點上方頁籤切換 */}
       {step<3 && (
         <div style={{
           position:"fixed", bottom:0, left:64, right:0, zIndex:20,
           background:C.card, borderTop:`1px solid ${C.border}`, boxShadow:C.shadowPop,
           padding:"12px 14px calc(12px + env(safe-area-inset-bottom))",
         }}>
-          <div style={{maxWidth:520, margin:"0 auto"}}>
+          <div style={{maxWidth:520, margin:"0 auto", display:"flex", gap:8}}>
+            {step>0 && (
+              <button onClick={()=>setStep(s=>s-1)} style={{
+                flex:1, padding:"14px", borderRadius:12, border:`1px solid ${C.border}`,
+                background:"transparent", color:C.sage, fontSize:14, fontWeight:700,
+                cursor:"pointer", letterSpacing:"0.05em",
+              }}>
+                ← 上一步
+              </button>
+            )}
             <button onClick={()=>setStep(s=>s+1)} style={{
-              width:"100%", padding:"14px", borderRadius:12, border:"none",
+              flex:2, padding:"14px", borderRadius:12, border:"none",
               background:C.gold, color:C.bg, fontSize:14, fontWeight:700,
               cursor:"pointer", letterSpacing:"0.05em",
               display:"flex", alignItems:"center", justifyContent:"center", gap:6,
@@ -903,16 +912,25 @@ export default function OrderEntry() {
                 ⚠️ 請先填寫客戶姓名與手機（①客戶頁面）才可建立訂單
               </div>
             )}
-            <button onClick={handleSubmit} disabled={submitting || !customer.name || !customer.phone || cards.length===0} style={{
-              width:"100%", padding:"15px", borderRadius:12, border:"none",
-              background:(submitting||!customer.name||!customer.phone||cards.length===0)?C.mid:C.gold,
-              color:(submitting||!customer.name||!customer.phone||cards.length===0)?C.border:C.bg,
-              fontSize:15, fontWeight:700,
-              cursor:(submitting||!customer.name||!customer.phone||cards.length===0)?"default":"pointer",
-              letterSpacing:"0.05em"
-            }}>
-              {submitting?"⏳ 建立中...":"✦ 確認建立訂單"}
-            </button>
+            <div style={{display:"flex", gap:8}}>
+              <button onClick={()=>setStep(s=>s-1)} style={{
+                flex:1, padding:"15px", borderRadius:12, border:`1px solid ${C.border}`,
+                background:"transparent", color:C.sage, fontSize:14, fontWeight:700,
+                cursor:"pointer", letterSpacing:"0.05em",
+              }}>
+                ← 上一步
+              </button>
+              <button onClick={handleSubmit} disabled={submitting || !customer.name || !customer.phone || cards.length===0} style={{
+                flex:2, padding:"15px", borderRadius:12, border:"none",
+                background:(submitting||!customer.name||!customer.phone||cards.length===0)?C.mid:C.gold,
+                color:(submitting||!customer.name||!customer.phone||cards.length===0)?C.border:C.bg,
+                fontSize:15, fontWeight:700,
+                cursor:(submitting||!customer.name||!customer.phone||cards.length===0)?"default":"pointer",
+                letterSpacing:"0.05em"
+              }}>
+                {submitting?"⏳ 建立中...":"✦ 確認建立訂單"}
+              </button>
+            </div>
           </div>
         </div>
       )}
