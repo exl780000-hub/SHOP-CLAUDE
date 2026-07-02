@@ -170,6 +170,7 @@ function Sidebar({ open, onClose }) {
         background: C.card, borderRight: `1px solid ${C.border}`,
         zIndex: 50, transition: "width 0.22s ease",
         overflow: "hidden", display: "flex", flexDirection: "column",
+        boxShadow: C.shadowPop,
       }}>
         {/* Logo */}
         <div style={{
@@ -228,6 +229,7 @@ function TopBar({ onMenuToggle }) {
       position: "fixed", top: 0, left: SIDEBAR_W, right: 0, height: 56,
       background: C.card, borderBottom: `1px solid ${C.border}`,
       display: "flex", alignItems: "center", gap: 12, padding: "0 16px", zIndex: 30,
+      boxShadow: C.shadowCard,
     }}>
       <button onClick={onMenuToggle} style={{
         background: "transparent", border: "none", cursor: "pointer",

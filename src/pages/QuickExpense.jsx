@@ -21,8 +21,8 @@ function Btn({ label, active, onClick, C }) {
 function Sec({ title, accent, children }) {
   const C = useTheme();
   return (
-    <div style={{ background: C.card, border: `1px solid ${accent || C.border}`, borderRadius: 12, padding: "16px 18px", marginBottom: 12 }}>
-      {title && <div style={{ fontSize: 12, color: accent || C.gold, fontWeight: 700, marginBottom: 12 }}>{title}</div>}
+    <div style={{ background: C.card, border: `1px solid ${accent || C.border}`, borderRadius: 14, padding: "16px 18px", marginBottom: 14, boxShadow: C.shadowCard }}>
+      {title && <div style={{ fontSize: 12, color: accent || C.gold, fontWeight: 700, marginBottom: 12, letterSpacing: "0.03em" }}>{title}</div>}
       {children}
     </div>
   );
@@ -69,7 +69,7 @@ function WageSettlement({ month }) {
   }
 
   return (
-    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 16px", marginBottom: 12 }}>
+    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "14px 16px", marginBottom: 14, boxShadow: C.shadowCard }}>
       <div style={{ fontSize: 12, color: C.gold, fontWeight: 700, marginBottom: 12 }}>🧾 師傅工資月結</div>
       {loading && <div style={{ color: C.sage, fontSize: 13 }}>載入中...</div>}
       {data && !loading && (
@@ -129,7 +129,7 @@ function TrendChart({ C, data }) {
     </div>
   );
   return (
-    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 16px", marginBottom: 12 }}>
+    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "14px 16px", marginBottom: 14, boxShadow: C.shadowCard }}>
       <div style={{ fontSize: 12, color: C.gold, fontWeight: 700, marginBottom: 10 }}>📈 近 {data.length} 個月趨勢</div>
       <div style={{ display: "flex", gap: 14, marginBottom: 12 }}>
         <Legend color={C.blue} label="公司費" />
@@ -189,8 +189,8 @@ function Dashboard() {
   };
 
   const Sec = ({ title, accent, children }) => (
-    <div style={{ background: C.card, border: `1px solid ${accent||C.border}`, borderRadius: 12, padding: "14px 16px", marginBottom: 12 }}>
-      {title && <div style={{ fontSize: 12, color: accent||C.gold, fontWeight: 700, marginBottom: 12 }}>{title}</div>}
+    <div style={{ background: C.card, border: `1px solid ${accent||C.border}`, borderRadius: 14, padding: "14px 16px", marginBottom: 14, boxShadow: C.shadowCard }}>
+      {title && <div style={{ fontSize: 12, color: accent||C.gold, fontWeight: 700, marginBottom: 12, letterSpacing:"0.03em" }}>{title}</div>}
       {children}
     </div>
   );
@@ -207,7 +207,7 @@ function Dashboard() {
   return (
     <div style={{ maxWidth: 520, margin: "0 auto", padding: "14px 14px 80px" }}>
       {/* 月份切換 */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, background: C.card, borderRadius: 12, padding: "10px 16px", border: `1px solid ${C.border}` }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, background: C.card, borderRadius: 14, padding: "10px 16px", border: `1px solid ${C.border}`, boxShadow: C.shadowCard }}>
         <button onClick={prevMonth} style={{ background: "none", border: "none", color: C.sage, fontSize: 22, cursor: "pointer", padding: "0 8px" }}>‹</button>
         <div style={{ fontSize: 16, fontWeight: 700, color: C.gold, fontFamily: "Georgia,serif" }}>{month}</div>
         <button onClick={nextMonth} style={{ background: "none", border: "none", color: C.sage, fontSize: 22, cursor: "pointer", padding: "0 8px", opacity: month >= monthStr(now) ? 0.3 : 1 }}>›</button>
@@ -274,7 +274,7 @@ function Dashboard() {
         </Sec>
 
         {/* ④ 最終月收益（公司費結餘 + 利潤，最後才加總） */}
-        <div style={{ background: C.card, border: `2px solid ${netColor}55`, borderRadius: 14, padding: "16px", marginBottom: 12 }}>
+        <div style={{ background: C.card, border: `2px solid ${netColor}55`, borderRadius: 14, padding: "16px", marginBottom: 14, boxShadow: C.shadowCard }}>
           <div style={{ fontSize: 11, color: C.sage, fontWeight: 700, marginBottom: 10 }}>📊 本月最終收益（公司費結餘 + 利潤）</div>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: 12, color: C.sage, marginBottom: 8 }}>
             <span style={{ color: s.fixedCostBalance >= 0 ? C.green : C.red, fontWeight: 700 }}>

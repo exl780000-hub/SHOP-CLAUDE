@@ -79,6 +79,9 @@ export function ThemeProvider({ children }) {
     ivory: bgTheme.ivory, sage: bgTheme.sage, mid: bgTheme.mid,
     gold: accentColor,
     ...FIXED,
+    // 卡片陰影：深色主題用深陰影營造層次，淺色主題用淡陰影避免髒
+    shadowCard: bgTheme.dark ? "0 2px 12px rgba(0,0,0,0.28)" : "0 2px 12px rgba(20,20,20,0.08)",
+    shadowPop:  bgTheme.dark ? "0 10px 32px rgba(0,0,0,0.5)"  : "0 10px 32px rgba(20,20,20,0.16)",
   };
 
   const setAccent = (key) => { setAccentKeyState(key); localStorage.setItem("gony-accent", key); };

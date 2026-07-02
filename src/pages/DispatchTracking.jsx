@@ -187,7 +187,7 @@ export default function DispatchTracking() {
             return (
               <div key={o.id} style={{
                 background: C.card, border: `1px solid ${C.border}`,
-                borderRadius: 12, marginBottom: 8, padding: "12px 14px",
+                borderRadius: 14, marginBottom: 8, padding: "12px 14px", boxShadow: C.shadowCard,
               }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -240,7 +240,7 @@ export default function DispatchTracking() {
             return (
               <div key={oid} style={{
                 background: C.card, border: `1px solid ${C.border}`,
-                borderRadius: 12, marginBottom: 10, overflow: "hidden",
+                borderRadius: 14, marginBottom: 10, overflow: "hidden", boxShadow: C.shadowCard,
               }}>
                 {/* 訂單標題 */}
                 <div style={{

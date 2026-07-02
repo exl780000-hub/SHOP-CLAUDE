@@ -264,7 +264,7 @@ export default function Orders() {
         const stuckDays = o.flow !== "🎉 完成訂單" ? daysSince(o.flowUpdatedAt) : null;
 
         return (
-          <div key={o.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, marginBottom: 10, overflow: "hidden" }}>
+          <div key={o.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, marginBottom: 10, overflow: "hidden", boxShadow: C.shadowCard }}>
 
             {/* 訂單列表行 */}
             <div onClick={() => handleExpand(o.id)}

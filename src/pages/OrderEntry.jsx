@@ -119,8 +119,8 @@ const BODY_TRAITS = {
 function Sec({title, children, accent, style={}}) {
   const C = useTheme();
   return (
-    <div style={{background:C.card, border:`1px solid ${accent||C.border}`, borderRadius:12, padding:"16px 18px", marginBottom:12, ...style}}>
-      {title && <div style={{fontSize:12, color:accent||C.gold, fontWeight:700, letterSpacing:"0.07em", marginBottom:12, paddingBottom:9, borderBottom:`1px solid ${C.border}`}}>{title}</div>}
+    <div style={{background:C.card, border:`1px solid ${accent||C.border}`, borderRadius:14, padding:"16px 18px", marginBottom:14, boxShadow:C.shadowCard, ...style}}>
+      {title && <div style={{fontSize:12, color:accent||C.gold, fontWeight:700, letterSpacing:"0.07em", marginBottom:13, paddingBottom:10, borderBottom:`1px solid ${C.border}`}}>{title}</div>}
       {children}
     </div>
   );
@@ -599,19 +599,27 @@ export default function OrderEntry() {
   return (
     <div style={{background:C.bg, color:C.ivory, fontFamily:"-apple-system,'Segoe UI',sans-serif"}}>
       {/* Step Bar — 步驟2-4可自由切換 */}
-      <div style={{display:"flex", background:C.card, borderBottom:`1px solid ${C.border}`}}>
+      <div style={{display:"flex", background:C.card, borderBottom:`1px solid ${C.border}`, boxShadow:C.shadowCard, position:"relative", zIndex:1}}>
         {STEPS.map((s,i)=>(
           <button key={s} onClick={()=>setStep(i)} style={{
             flex:1, cursor:"pointer", background:"none", border:"none",
-            padding:"11px 4px", borderBottom:`2px solid ${step===i?C.gold:"transparent"}`,
+            padding:"12px 4px 10px", borderBottom:`2px solid ${step===i?C.gold:"transparent"}`,
             color:step===i?C.gold:C.sage, fontSize:11, fontWeight:700,
+            transition:"color 0.15s, border-color 0.15s",
           }}>
-            <div style={{fontSize:14, marginBottom:1}}>{"①②③④"[i]}</div>{s}
+            <div style={{
+              width:20, height:20, lineHeight:"20px", borderRadius:"50%", margin:"0 auto 4px",
+              fontSize:12, fontWeight:800, fontFamily:"Georgia,serif",
+              background:step===i?C.gold:"transparent",
+              color:step===i?C.bg:C.sage,
+              border:step===i?"none":`1px solid ${C.border}`,
+              transition:"background 0.15s, color 0.15s",
+            }}>{i+1}</div>{s}
           </button>
         ))}
       </div>
 
-      <div style={{maxWidth:520, margin:"0 auto", padding:"14px 14px 110px"}}>
+      <div style={{maxWidth:520, margin:"0 auto", padding:"16px 14px 110px"}}>
 
         {/* ① 客戶 */}
         {step===0 && (
