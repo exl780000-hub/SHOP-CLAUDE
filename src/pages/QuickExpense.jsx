@@ -165,7 +165,7 @@ function Dashboard() {
     try {
       const [r, rt] = await Promise.all([
         fetch(`/api/finance-summary?month=${m}`),
-        fetch(`/api/finance-trend?month=${m}&months=6`),
+        fetch(`/api/finance-summary?trend=1&month=${m}&months=6`),
       ]);
       const d = await r.json();
       if (d.success) setSummary(d);

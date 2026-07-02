@@ -113,6 +113,29 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") return res.status(200).end();
 
   try {
+    // ?trend=1&months=N：回傳近 N 個月趨勢（合併自 finance-trend.js，節省 Vercel serverless function 額度）
+    if (req.query.trend) {
+      const n = Math.min(Number(req.query.months) || 6, 12);
+      const base = req.query.month ? new Date(req.query.month + "-01") : new Date();
+      const months = [];
+      for (let i = n - 1; i >= 0; i--) {
+        const d = new Date(base);
+        d.setMonth(d.getMonth() - i);
+        months.push(monthStr(d));
+      }
+      const summaries = await Promise.all(months.map(m => computeSummary(m)));
+      return res.status(200).json({
+        success: true,
+        trend: summaries.map(s => ({
+          month: s.month,
+          totalCompanyFee: s.totalCompanyFee,
+          totalOrderProfit: s.totalOrderProfit,
+          totalCost: s.totalCost,
+          netProfit: s.netProfit,
+        })),
+      });
+    }
+
     const month = req.query.month || monthStr();
     const summary = await computeSummary(month);
     return res.status(200).json({ success: true, ...summary });

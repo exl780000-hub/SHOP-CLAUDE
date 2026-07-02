@@ -112,9 +112,9 @@ export default function Orders() {
   const collectBalance = async (orderId) => {
     setCollectingBalance(orderId);
     try {
-      const r = await fetch("/api/collect-balance", {
+      const r = await fetch("/api/update-order", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId }),
+        body: JSON.stringify({ action: "collect-balance", orderId }),
       });
       const d = await r.json();
       if (!d.success) throw new Error(d.error);

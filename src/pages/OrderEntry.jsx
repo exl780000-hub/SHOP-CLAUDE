@@ -520,7 +520,7 @@ export default function OrderEntry() {
   useEffect(() => {
     if (customer.phone.length < 8) { setCustomerHistory(null); return; }
     let cancelled = false;
-    fetch(`/api/customer-history?phone=${encodeURIComponent(customer.phone)}`)
+    fetch(`/api/orders?phone=${encodeURIComponent(customer.phone)}`)
       .then(r => r.json())
       .then(d => { if (!cancelled && d.success) setCustomerHistory(d.isReturning ? d : null); })
       .catch(() => {});
