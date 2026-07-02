@@ -866,8 +866,20 @@ export default function OrderEntry() {
                 )}
               </div>
             )}
+          </>
+        )}
+      </div>
+
+      {/* 建立訂單：浮動於底部，跟隨捲動，各裝置寬度自適應 */}
+      {step===3 && (
+        <div style={{
+          position:"fixed", bottom:0, left:0, right:0, zIndex:20,
+          background:C.card, borderTop:`1px solid ${C.border}`, boxShadow:C.shadowPop,
+          padding:"12px 14px calc(12px + env(safe-area-inset-bottom))",
+        }}>
+          <div style={{maxWidth:520, margin:"0 auto"}}>
             {(!customer.name || !customer.phone) && (
-              <div style={{marginBottom:10, padding:"10px 14px", background:C.gold+"18", border:`1px solid ${C.gold}44`, borderRadius:8, fontSize:12, color:C.gold}}>
+              <div style={{marginBottom:8, padding:"8px 12px", background:C.gold+"18", border:`1px solid ${C.gold}44`, borderRadius:8, fontSize:11, color:C.gold}}>
                 ⚠️ 請先填寫客戶姓名與手機（①客戶頁面）才可建立訂單
               </div>
             )}
@@ -881,9 +893,9 @@ export default function OrderEntry() {
             }}>
               {submitting?"⏳ 建立中...":"✦ 確認建立訂單"}
             </button>
-          </>
-        )}
-      </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
