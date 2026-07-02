@@ -873,7 +873,7 @@ export default function OrderEntry() {
       {/* 下一步：①②③步驟浮動於底部，仍可自由點上方頁籤切換 */}
       {step<3 && (
         <div style={{
-          position:"fixed", bottom:0, left:0, right:0, zIndex:20,
+          position:"fixed", bottom:0, left:64, right:0, zIndex:20,
           background:C.card, borderTop:`1px solid ${C.border}`, boxShadow:C.shadowPop,
           padding:"12px 14px calc(12px + env(safe-area-inset-bottom))",
         }}>
@@ -893,7 +893,7 @@ export default function OrderEntry() {
       {/* 建立訂單：浮動於底部，跟隨捲動，各裝置寬度自適應 */}
       {step===3 && (
         <div style={{
-          position:"fixed", bottom:0, left:0, right:0, zIndex:20,
+          position:"fixed", bottom:0, left:64, right:0, zIndex:20,
           background:C.card, borderTop:`1px solid ${C.border}`, boxShadow:C.shadowPop,
           padding:"12px 14px calc(12px + env(safe-area-inset-bottom))",
         }}>
