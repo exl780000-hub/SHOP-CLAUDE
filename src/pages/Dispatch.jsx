@@ -72,8 +72,8 @@ function Sec({ title, children, accent }) {
   const C = useTheme();
   return (
     <div style={{ background: C.card, border: `1px solid ${accent ? accent + "55" : C.border}`,
-      borderRadius: 12, padding: "16px 18px", marginBottom: 12 }}>
-      {title && <div style={{ fontSize: 12, color: accent || C.gold, fontWeight: 700, marginBottom: 12 }}>{title}</div>}
+      borderRadius: 14, padding: "16px 18px", marginBottom: 14, boxShadow: C.shadowCard }}>
+      {title && <div style={{ fontSize: 12, color: accent || C.gold, fontWeight: 700, marginBottom: 12, letterSpacing: "0.05em" }}>{title}</div>}
       {children}
     </div>
   );

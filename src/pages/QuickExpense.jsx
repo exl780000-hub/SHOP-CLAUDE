@@ -22,7 +22,7 @@ function Sec({ title, accent, children }) {
   const C = useTheme();
   return (
     <div style={{ background: C.card, border: `1px solid ${accent || C.border}`, borderRadius: 14, padding: "16px 18px", marginBottom: 14, boxShadow: C.shadowCard }}>
-      {title && <div style={{ fontSize: 12, color: accent || C.gold, fontWeight: 700, marginBottom: 12, letterSpacing: "0.03em" }}>{title}</div>}
+      {title && <div style={{ fontSize: 12, color: accent || C.gold, fontWeight: 700, marginBottom: 12, letterSpacing: "0.05em" }}>{title}</div>}
       {children}
     </div>
   );
@@ -190,7 +190,7 @@ function Dashboard() {
 
   const Sec = ({ title, accent, children }) => (
     <div style={{ background: C.card, border: `1px solid ${accent||C.border}`, borderRadius: 14, padding: "14px 16px", marginBottom: 14, boxShadow: C.shadowCard }}>
-      {title && <div style={{ fontSize: 12, color: accent||C.gold, fontWeight: 700, marginBottom: 12, letterSpacing:"0.03em" }}>{title}</div>}
+      {title && <div style={{ fontSize: 12, color: accent||C.gold, fontWeight: 700, marginBottom: 12, letterSpacing:"0.05em" }}>{title}</div>}
       {children}
     </div>
   );

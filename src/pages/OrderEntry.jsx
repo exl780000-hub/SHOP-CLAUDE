@@ -120,14 +120,14 @@ function Sec({title, children, accent, style={}}) {
   const C = useTheme();
   return (
     <div style={{background:C.card, border:`1px solid ${accent||C.border}`, borderRadius:14, padding:"16px 18px", marginBottom:14, boxShadow:C.shadowCard, ...style}}>
-      {title && <div style={{fontSize:12, color:accent||C.gold, fontWeight:700, letterSpacing:"0.07em", marginBottom:13, paddingBottom:10, borderBottom:`1px solid ${C.border}`}}>{title}</div>}
+      {title && <div style={{fontSize:12, color:accent||C.gold, fontWeight:700, letterSpacing:"0.05em", marginBottom:13, paddingBottom:10, borderBottom:`1px solid ${C.border}`}}>{title}</div>}
       {children}
     </div>
   );
 }
 function Lbl({children}) {
   const C = useTheme();
-  return <div style={{fontSize:11, color:C.gold, fontWeight:700, letterSpacing:"0.07em", marginBottom:5}}>{children}</div>;
+  return <div style={{fontSize:11, color:C.gold, fontWeight:700, letterSpacing:"0.05em", marginBottom:5}}>{children}</div>;
 }
 function TxtIn({label, value, onChange, type="text", placeholder="", style={}}) {
   const C = useTheme();
@@ -320,7 +320,7 @@ function CardBlock({ card, cardIndex, onUpdate, onRemove }) {
         {cfg.parts.map((part, pi) => (
           <div key={part}>
             {cfg.suit && (
-              <div style={{fontSize:12, color:PART_COLOR[part], fontWeight:700, letterSpacing:"0.07em",
+              <div style={{fontSize:12, color:PART_COLOR[part], fontWeight:700, letterSpacing:"0.05em",
                 marginBottom:10, marginTop:pi>0?16:0, paddingTop:pi>0?14:0,
                 borderTop:pi>0?`1px solid ${C.border}`:"none"}}>
                 {part === "外套" ? "👔 外套" : part === "褲子" ? "👖 褲子" : "🦺 背心"}
