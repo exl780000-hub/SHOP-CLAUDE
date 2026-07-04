@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTheme } from "../theme.jsx";
+import { useIsWide } from "../useIsWide.js";
 
 const TODAY = new Date().toISOString().slice(0, 10);
 
@@ -43,6 +44,7 @@ function daysSince(dateStr) {
 
 export default function DispatchTracking() {
   const C = useTheme();
+  const isWide = useIsWide();
   const navigate = useNavigate();
   const [dispatches, setDispatches] = useState([]);
   const [orders, setOrders]         = useState([]);
@@ -140,7 +142,7 @@ export default function DispatchTracking() {
   ];
 
   return (
-    <div style={{ maxWidth: 520, margin: "0 auto", padding: "14px 14px 80px" }}>
+    <div style={{ maxWidth: isWide?900:520, margin: "0 auto", padding: "14px 14px 80px" }}>
 
       {/* Tabs */}
       <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>

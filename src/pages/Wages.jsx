@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTheme } from "../theme.jsx";
+import { useIsWide } from "../useIsWide.js";
 
 const TAILORS = ["全部", "外套師傅", "褲子師傅", "經理"];
 
@@ -470,6 +471,7 @@ function FullWageCard({ order, onSaved }) {
 
 export default function Wages() {
   const C = useTheme();
+  const isWide = useIsWide();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dispatchedOrderIds, setDispatchedOrderIds] = useState(null);
@@ -547,7 +549,7 @@ export default function Wages() {
   };
 
   return (
-    <div style={{ maxWidth: 520, margin: "0 auto", padding: "14px 14px 80px" }}>
+    <div style={{ maxWidth: isWide?900:520, margin: "0 auto", padding: "14px 14px 80px" }}>
 
       {/* 時間篩選 */}
       <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 16px", marginBottom: 12 }}>

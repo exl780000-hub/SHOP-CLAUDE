@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTheme } from "../theme.jsx";
+import { useIsWide } from "../useIsWide.js";
 
 const ACCOUNTS = ["🏦 銀行", "💵 現金", "💳 信用卡"];
 const CATEGORIES = ["材料成本", "人事成本", "固定成本", "其他支出", "其他收入"];
@@ -154,6 +155,7 @@ function TrendChart({ C, data }) {
 
 function Dashboard() {
   const C = useTheme();
+  const isWide = useIsWide();
   const now = new Date();
   const [month, setMonth] = useState(monthStr(now));
   const [summary, setSummary] = useState(null);
@@ -205,7 +207,7 @@ function Dashboard() {
   const netColor = !s ? C.sage : s.netProfit >= 0 ? C.green : C.red;
 
   return (
-    <div style={{ maxWidth: 520, margin: "0 auto", padding: "14px 14px 80px" }}>
+    <div style={{ maxWidth: isWide?900:520, margin: "0 auto", padding: "14px 14px 80px" }}>
       {/* 月份切換 */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14, background: C.card, borderRadius: 14, padding: "10px 16px", border: `1px solid ${C.border}`, boxShadow: C.shadowCard }}>
         <button onClick={prevMonth} style={{ background: "none", border: "none", color: C.sage, fontSize: 22, cursor: "pointer", padding: "0 8px" }}>‹</button>
@@ -328,6 +330,7 @@ function Dashboard() {
 // ─── 快速記帳頁籤 ──────────────────────────────────────────────────────────────
 function Expense() {
   const C = useTheme();
+  const isWide = useIsWide();
   const [type, setType] = useState("💸 支出");
   const [account, setAccount] = useState("💵 現金");
   const [category, setCategory] = useState("其他支出");
@@ -369,7 +372,7 @@ function Expense() {
 
 
   return (
-    <div style={{ maxWidth: 520, margin: "0 auto", padding: "14px 14px 80px" }}>
+    <div style={{ maxWidth: isWide?900:520, margin: "0 auto", padding: "14px 14px 80px" }}>
       <Sec title="💰 收支類型">
         <div style={{ display: "flex", gap: 8 }}>
           <Btn label="💸 支出" active={type === "💸 支出"} onClick={() => setType("💸 支出")} C={C} />

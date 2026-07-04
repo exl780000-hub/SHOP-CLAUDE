@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTheme } from "../theme.jsx";
+import { useIsWide } from "../useIsWide.js";
 
 // 與 create-order.js / create-dispatch.js / update-dispatch.js 實際寫入 Notion 的值一致
 const FLOW_STEPS = [
@@ -38,6 +39,7 @@ function StuckBadge({ days, C }) {
 
 export default function Orders() {
   const C = useTheme();
+  const isWide = useIsWide();
   const flowColor = (f) => FLOW_COLOR_FIXED[f] || C.gold;
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -167,7 +169,7 @@ export default function Orders() {
   };
 
   return (
-    <div style={{ maxWidth: 520, margin: "0 auto", padding: "14px 14px 80px" }}>
+    <div style={{ maxWidth: isWide?1100:520, margin: "0 auto", padding: "14px 14px 80px" }}>
 
       {/* 搜尋 */}
       <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
@@ -255,6 +257,7 @@ export default function Orders() {
         <div style={{ color: C.sage, textAlign: "center", padding: 40 }}>沒有找到訂單</div>
       )}
 
+      <div style={isWide ? { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: 12, alignItems: "start" } : undefined}>
       {filtered.map(o => {
         const isOpen = expanded === o.id;
         const fc = flowColor(o.flow);
@@ -264,7 +267,7 @@ export default function Orders() {
         const stuckDays = o.flow !== "🎉 完成訂單" ? daysSince(o.flowUpdatedAt) : null;
 
         return (
-          <div key={o.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, marginBottom: 10, overflow: "hidden", boxShadow: C.shadowCard }}>
+          <div key={o.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, marginBottom: isWide?0:10, overflow: "hidden", boxShadow: C.shadowCard, gridColumn: isWide && isOpen ? "1 / -1" : undefined }}>
 
             {/* 訂單列表行 */}
             <div onClick={() => handleExpand(o.id)}
@@ -420,6 +423,7 @@ export default function Orders() {
           </div>
         );
       })}
+      </div>
 
       {/* Toast */}
       {toast && (

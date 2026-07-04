@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTheme } from "../theme.jsx";
+import { useIsWide } from "../useIsWide.js";
 
 const DISPATCH_TYPES = [
   { type: "📐 打版單",    tailors: ["經理"],                    content: "full",          flows: ["📐 打版"] },
@@ -81,6 +82,7 @@ function Sec({ title, children, accent }) {
 
 export default function Dispatch() {
   const C = useTheme();
+  const isWide = useIsWide();
   const [search, setSearch]                   = useState("");
   const [orders, setOrders]                   = useState([]);
   const [loading, setLoading]                 = useState(false);
@@ -196,7 +198,7 @@ export default function Dispatch() {
   const flowPreview = dtype ? DISPATCH_FLOW_PREVIEW[dtype.type] : null;
 
   return (
-    <div style={{ maxWidth: 520, margin: "0 auto", padding: "14px 14px 80px" }}>
+    <div style={{ maxWidth: isWide?900:520, margin: "0 auto", padding: "14px 14px 80px" }}>
 
       {/* ① 搜尋訂單 */}
       <Sec title="🔍 選擇訂單">

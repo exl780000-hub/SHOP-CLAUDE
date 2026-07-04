@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTheme } from "../theme.jsx";
+import { useIsWide } from "../useIsWide.js";
 
 // ─── Pricing ──────────────────────────────────────────────────────────────────
 const GONGBEN = {
@@ -654,6 +655,8 @@ export default function OrderEntry() {
     return cardIndexMap[card.type];
   };
 
+  const isWide = useIsWide();
+
   return (
     <div style={{background:C.bg, color:C.ivory, fontFamily:"-apple-system,'Segoe UI',sans-serif"}}>
       {/* Step Bar — 步驟2-4可自由切換 */}
@@ -677,7 +680,11 @@ export default function OrderEntry() {
         ))}
       </div>
 
-      <div style={{maxWidth:520, margin:"0 auto", padding:"16px 14px 110px"}}>
+      <div style={{
+        display:"flex", justifyContent:"center", alignItems:"flex-start", gap:24,
+        maxWidth: isWide?1040:520, margin:"0 auto", padding: isWide?"20px 24px 110px":"16px 14px 110px",
+      }}>
+      <div style={{flex:1, minWidth:0, maxWidth: isWide?640:"100%"}}>
 
         {/* ① 客戶 */}
         {step===0 && (
@@ -928,6 +935,55 @@ export default function OrderEntry() {
         )}
       </div>
 
+      {/* 寬螢幕：右側常駐訂單摘要，減少空版感 */}
+      {isWide && (
+        <div style={{ width:280, flexShrink:0, position:"sticky", top:20 }}>
+          <Sec title="📋 訂單摘要">
+            <div style={{fontSize:13, fontWeight:700, color:C.ivory, marginBottom:2}}>
+              {customer.name || "（尚未填寫姓名）"}
+            </div>
+            <div style={{fontSize:11, color:C.sage, marginBottom:10}}>
+              {customer.phone || "（尚未填寫手機）"}
+            </div>
+            {customerHistory && (
+              <div style={{fontSize:11, color:C.gold, marginBottom:10}}>👤 舊客戶・曾訂購 {customerHistory.orderCount} 筆</div>
+            )}
+            <div style={{borderTop:`1px solid ${C.border}`, paddingTop:10, marginBottom:10}}>
+              {cards.length===0 ? (
+                <div style={{fontSize:12, color:C.border}}>尚未加入樣式卡</div>
+              ) : cards.map((c,i)=>(
+                <div key={c.id} style={{display:"flex", justifyContent:"space-between", fontSize:12, padding:"3px 0"}}>
+                  <span style={{color:C.sage}}>{CARD_TYPES[c.type]?.icon} {c.type}</span>
+                  <span style={{color:C.ivory, fontFamily:"Georgia,serif"}}>${calcCard(c).actual.toLocaleString()}</span>
+                </div>
+              ))}
+            </div>
+            <div style={{display:"flex", justifyContent:"space-between", paddingTop:8, borderTop:`1px solid ${C.border}`}}>
+              <span style={{fontSize:12, fontWeight:700, color:C.ivory}}>總計</span>
+              <span style={{fontSize:16, fontWeight:700, color:C.gold, fontFamily:"Georgia,serif"}}>${totalActual.toLocaleString()}</span>
+            </div>
+          </Sec>
+          <Sec title="📍 步驟">
+            {STEPS.map((s,i)=>(
+              <button key={s} onClick={()=>setStep(i)} style={{
+                width:"100%", display:"flex", alignItems:"center", gap:8, textAlign:"left",
+                padding:"8px 6px", marginBottom:4, borderRadius:8, border:"none", cursor:"pointer",
+                background: step===i ? C.gold+"1a" : "transparent",
+              }}>
+                <span style={{
+                  width:20, height:20, lineHeight:"20px", textAlign:"center", borderRadius:"50%", flexShrink:0,
+                  fontSize:11, fontWeight:800, fontFamily:"Georgia,serif",
+                  background:step===i?C.gold:"transparent", color:step===i?C.bg:C.sage,
+                  border:step===i?"none":`1px solid ${C.border}`,
+                }}>{i+1}</span>
+                <span style={{fontSize:13, fontWeight:step===i?700:500, color:step===i?C.gold:C.sage}}>{s}</span>
+              </button>
+            ))}
+          </Sec>
+        </div>
+      )}
+      </div>
+
       {/* 上一步／下一步：浮動於底部，仍可自由點上方頁籤切換 */}
       {step<3 && (
         <div style={{
@@ -935,7 +991,7 @@ export default function OrderEntry() {
           background:C.card, borderTop:`1px solid ${C.border}`, boxShadow:C.shadowPop,
           padding:"12px 14px calc(12px + env(safe-area-inset-bottom))",
         }}>
-          <div style={{maxWidth:520, margin:"0 auto", display:"flex", gap:8}}>
+          <div style={{maxWidth: isWide?640:520, margin:"0 auto", display:"flex", gap:8}}>
             {step>0 && (
               <button onClick={()=>setStep(s=>s-1)} style={{
                 flex:1, padding:"14px", borderRadius:12, border:`1px solid ${C.border}`,
@@ -964,7 +1020,7 @@ export default function OrderEntry() {
           background:C.card, borderTop:`1px solid ${C.border}`, boxShadow:C.shadowPop,
           padding:"12px 14px calc(12px + env(safe-area-inset-bottom))",
         }}>
-          <div style={{maxWidth:520, margin:"0 auto"}}>
+          <div style={{maxWidth: isWide?640:520, margin:"0 auto"}}>
             {(!customer.name || !customer.phone) && (
               <div style={{marginBottom:8, padding:"8px 12px", background:C.gold+"18", border:`1px solid ${C.gold}44`, borderRadius:8, fontSize:11, color:C.gold}}>
                 ⚠️ 請先填寫客戶姓名與手機（①客戶頁面）才可建立訂單
