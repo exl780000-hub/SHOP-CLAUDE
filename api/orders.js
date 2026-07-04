@@ -51,7 +51,28 @@ export default async function handler(req, res) {
     if (req.query.phone != null) return await customerHistory(res, req.query.phone);
 
     const q = (req.query.q || "").trim();
-    const data = await queryDatabase(DB.order);
+    // 一次抓齊：訂單 + 待收付財務記錄 + 派工單（算尾款/工資狀態，避免逐筆查詢）
+    const [data, pendingFinance, dispatchData] = await Promise.all([
+      queryDatabase(DB.order),
+      queryDatabase(DB.finance, { property: "付款狀態", select: { equals: "待收/待付" } }),
+      queryDatabase(DB.dispatch),
+    ]);
+
+    // 有待收記錄的訂單 id 集合
+    const pendingBalanceIds = new Set();
+    for (const p of pendingFinance.results) {
+      for (const rel of p.properties["關聯訂單"]?.relation || []) pendingBalanceIds.add(rel.id);
+    }
+
+    // 每筆訂單的派工工資狀態：已完成派工中尚未確認工資的數量
+    const wageUnconfirmed = {};
+    for (const p of dispatchData.results) {
+      const oid = p.properties["訂單"]?.relation?.[0]?.id;
+      if (!oid) continue;
+      const status = p.properties["狀態"]?.select?.name || "";
+      const confirmed = p.properties["工資確認"]?.checkbox || false;
+      if (status === "✅ 完成" && !confirmed) wageUnconfirmed[oid] = (wageUnconfirmed[oid] || 0) + 1;
+    }
 
     const orders = data.results.map(p => {
       const props = p.properties;
@@ -88,6 +109,8 @@ export default async function handler(req, res) {
         trouserStyle: getText("褲子樣式"),
         vestStyle: getText("背心樣式"),
         shirtStyle: getText("襯衫樣式"),
+        balancePending: pendingBalanceIds.has(p.id),
+        wageUnconfirmedCount: wageUnconfirmed[p.id] || 0,
       };
     });
 

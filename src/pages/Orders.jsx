@@ -121,6 +121,7 @@ export default function Orders() {
       const d = await r.json();
       if (!d.success) throw new Error(d.error);
       setCollectedIds(prev => new Set([...prev, orderId]));
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, balancePending: false } : o));
       showToast("✅ 尾款已標記為已收");
     } catch (e) {
       showToast("失敗：" + e.message, false);
@@ -128,7 +129,24 @@ export default function Orders() {
     setCollectingBalance(null);
   };
 
-  const doSearch = () => load(search);
+  const [archiving, setArchiving] = useState(null);
+  const archiveOrder = async (orderId) => {
+    setArchiving(orderId);
+    try {
+      const r = await fetch("/api/update-order", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, status: "🎉 完成取件" }),
+      });
+      const d = await r.json();
+      if (!d.success) throw new Error(d.error);
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: "🎉 完成取件" } : o));
+      setExpanded(null);
+      showToast("🎉 訂單已歸檔（完成取件）");
+    } catch (e) {
+      showToast("失敗：" + e.message, false);
+    }
+    setArchiving(null);
+  };
 
   const itemOptions = [...new Set(orders.flatMap(o => (o.items || "").split("、").filter(Boolean)))];
 
@@ -137,7 +155,9 @@ export default function Orders() {
   };
   const moreFiltersActive = stageFilter !== "全部" || itemFilter !== "全部" || dateFrom || dateTo;
 
+  const kw = search.trim();
   const filtered = orders.filter(o => {
+    if (kw && !(o.name || "").includes(kw) && !String(o.orderNo || "").includes(kw)) return false;
     if (filter === "已完成" && o.flow !== "🎉 完成訂單") return false;
     if (filter === "進行中" && o.flow === "🎉 完成訂單") return false;
     if (stageFilter !== "全部" && o.flow !== stageFilter) return false;
@@ -146,6 +166,14 @@ export default function Orders() {
     if (dateTo && o.date && o.date > dateTo) return false;
     return true;
   });
+
+  // 分層：需要處理（完成待收尾/卡太久）→ 進行中 → 已歸檔（完成取件，收合）
+  const isArchived = (o) => o.status === "🎉 完成取件";
+  const isDone = (o) => o.flow === "🎉 完成訂單";
+  const byDateDesc = (a, b) => (b.date || "").localeCompare(a.date || "");
+  const tierAction  = filtered.filter(o => !isArchived(o) && (isDone(o) || (daysSince(o.flowUpdatedAt) ?? 0) >= 5)).sort(byDateDesc);
+  const tierOngoing = filtered.filter(o => !isArchived(o) && !isDone(o) && (daysSince(o.flowUpdatedAt) ?? 0) < 5).sort(byDateDesc);
+  const tierArchived = filtered.filter(isArchived).sort(byDateDesc);
 
   const StyleRow = ({ label, value }) => {
     if (!value) return null;
@@ -171,14 +199,15 @@ export default function Orders() {
   return (
     <div style={{ maxWidth: isWide?1100:520, margin: "0 auto", padding: "14px 14px 80px" }}>
 
-      {/* 搜尋 */}
+      {/* 搜尋（即時篩選） */}
       <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
         <input value={search} onChange={e => setSearch(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && doSearch()}
-          placeholder="搜尋客戶名稱或訂單編號"
+          placeholder="🔍 輸入客戶名稱或訂單編號即時篩選"
           style={{ flex: 1, background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "10px 14px", color: C.ivory, fontSize: 14, outline: "none" }} />
-        <button onClick={doSearch}
-          style={{ background: C.gold, color: C.bg, border: "none", borderRadius: 10, padding: "10px 16px", fontWeight: 700, fontSize: 14, cursor: "pointer" }}>搜尋</button>
+        {search && (
+          <button onClick={() => setSearch("")}
+            style={{ background: "transparent", color: C.sage, border: `1px solid ${C.border}`, borderRadius: 10, padding: "10px 14px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>✕</button>
+        )}
       </div>
 
       {/* 篩選 */}
@@ -257,19 +286,36 @@ export default function Orders() {
         <div style={{ color: C.sage, textAlign: "center", padding: 40 }}>沒有找到訂單</div>
       )}
 
+      {[
+        { key: "action",   title: `🔴 需要處理（${tierAction.length}）`,     list: tierAction,   color: C.red },
+        { key: "ongoing",  title: `🚧 進行中（${tierOngoing.length}）`,      list: tierOngoing,  color: C.gold },
+        { key: "archived", title: `✅ 已完成歸檔（${tierArchived.length}）`, list: tierArchived, color: C.green, slim: true },
+      ].map(sec => sec.list.length === 0 ? null : (
+      <div key={sec.key} style={{ marginBottom: 18 }}>
+      <div style={{ fontSize: 12, fontWeight: 700, color: sec.color, marginBottom: 8, letterSpacing: "0.05em" }}>{sec.title}</div>
       <div style={isWide ? { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: 12, alignItems: "start" } : undefined}>
-      {filtered.map(o => {
+      {sec.list.map(o => {
         const isOpen = expanded === o.id;
         const fc = flowColor(o.flow);
         const balance = (o.actualPrice || 0) - (o.deposit || 0);
         const meas = measurement[o.id];
         const measLoading = loadingMeas[o.id];
-        const stuckDays = o.flow !== "🎉 完成訂單" ? daysSince(o.flowUpdatedAt) : null;
+        const stuckDays = (!isDone(o) && !isArchived(o)) ? daysSince(o.flowUpdatedAt) : null;
+        const balanceOwed = o.balancePending || (balance > 0 && !collectedIds.has(o.id) && o.balancePending !== false);
+        const slimRow = sec.slim && !isOpen;
 
         return (
-          <div key={o.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, marginBottom: isWide?0:10, overflow: "hidden", boxShadow: C.shadowCard, gridColumn: isWide && isOpen ? "1 / -1" : undefined }}>
+          <div key={o.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, marginBottom: isWide?0:(slimRow?6:10), overflow: "hidden", boxShadow: slimRow ? "none" : C.shadowCard, opacity: slimRow ? 0.75 : 1, gridColumn: isWide && isOpen ? "1 / -1" : undefined }}>
 
             {/* 訂單列表行 */}
+            {slimRow ? (
+              <div onClick={() => handleExpand(o.id)}
+                style={{ padding: "9px 14px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: C.sage, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{o.name}</div>
+                <span style={{ fontSize: 11, color: C.border, flexShrink: 0 }}>{o.date}</span>
+                {o.actualPrice ? <span style={{ fontSize: 12, fontWeight: 700, color: C.sage, fontFamily: "Georgia,serif", flexShrink: 0 }}>${Number(o.actualPrice).toLocaleString()}</span> : null}
+              </div>
+            ) : (
             <div onClick={() => handleExpand(o.id)}
               style={{ padding: "12px 16px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -278,6 +324,16 @@ export default function Orders() {
                   {o.items && <span style={{ fontSize: 11, color: C.sage }}>{o.items}</span>}
                   {o.date && <span style={{ fontSize: 11, color: C.border }}>·</span>}
                   {o.date && <span style={{ fontSize: 11, color: C.sage }}>{o.date}</span>}
+                  {balanceOwed && !isArchived(o) && (
+                    <span style={{ fontSize: 10, fontWeight: 700, color: C.red, background: C.red + "18", border: `1px solid ${C.red}44`, borderRadius: 10, padding: "1px 7px" }}>
+                      💰 尾款未收 ${Number(balance).toLocaleString()}
+                    </span>
+                  )}
+                  {isDone(o) && !isArchived(o) && o.wageUnconfirmedCount > 0 && (
+                    <span style={{ fontSize: 10, fontWeight: 700, color: C.gold, background: C.gold + "18", border: `1px solid ${C.gold}44`, borderRadius: 10, padding: "1px 7px" }}>
+                      🧾 {o.wageUnconfirmedCount} 筆工資未確認
+                    </span>
+                  )}
                 </div>
               </div>
               <div style={{ textAlign: "right", marginLeft: 10, flexShrink: 0 }}>
@@ -286,14 +342,38 @@ export default function Orders() {
                     ${Number(o.actualPrice).toLocaleString()}
                   </div>
                 ) : null}
-                <div style={{ fontSize: 11, fontWeight: 700, color: fc, marginTop: 3 }}>{o.flow || o.status}</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: fc, marginTop: 3 }}>{isArchived(o) ? "🎉 完成取件" : (o.flow || o.status)}</div>
                 {stuckDays != null && <div style={{ marginTop: 4 }}><StuckBadge days={stuckDays} C={C} /></div>}
               </div>
             </div>
+            )}
 
             {/* 展開詳情 */}
             {isOpen && (
               <div style={{ borderTop: `1px solid ${C.border}`, padding: "14px 16px" }}>
+
+                {/* 完成收尾清單：完成訂單但尚未歸檔 */}
+                {isDone(o) && !isArchived(o) && (
+                  <div style={{ marginBottom: 14, padding: "12px 14px", background: C.green + "12", border: `1px solid ${C.green}44`, borderRadius: 10 }}>
+                    <div style={{ fontSize: 12, color: C.green, fontWeight: 700, marginBottom: 8 }}>🏁 完成收尾清單</div>
+                    {[
+                      { ok: !balanceOwed, label: balanceOwed ? `尾款未收 $${Number(balance).toLocaleString()}（下方可收款）` : "尾款已收" },
+                      { ok: o.wageUnconfirmedCount === 0, label: o.wageUnconfirmedCount > 0 ? `${o.wageUnconfirmedCount} 筆派工工資未確認（派工追蹤頁填寫）` : "師傅工資已確認" },
+                    ].map((item, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0" }}>
+                        <span style={{ fontSize: 14 }}>{item.ok ? "✅" : "⬜"}</span>
+                        <span style={{ fontSize: 12, color: item.ok ? C.sage : C.ivory, fontWeight: item.ok ? 400 : 700 }}>{item.label}</span>
+                      </div>
+                    ))}
+                    <button onClick={() => archiveOrder(o.id)} disabled={archiving === o.id}
+                      style={{ width: "100%", marginTop: 10, padding: "10px", borderRadius: 8, border: "none",
+                        background: archiving === o.id ? C.mid : (!balanceOwed && o.wageUnconfirmedCount === 0 ? C.green : C.mid),
+                        color: archiving === o.id ? C.sage : (!balanceOwed && o.wageUnconfirmedCount === 0 ? "#fff" : C.sage),
+                        fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                      {archiving === o.id ? "處理中..." : (!balanceOwed && o.wageUnconfirmedCount === 0 ? "🎉 客戶已取件，完成歸檔" : "🎉 仍要歸檔（尚有未完成項目）")}
+                    </button>
+                  </div>
+                )}
 
                 {/* 流程更新 */}
                 <div style={{ marginBottom: 14 }}>
@@ -424,6 +504,8 @@ export default function Orders() {
         );
       })}
       </div>
+      </div>
+      ))}
 
       {/* Toast */}
       {toast && (
