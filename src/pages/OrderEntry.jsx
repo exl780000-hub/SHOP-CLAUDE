@@ -287,12 +287,43 @@ function PartBlock({ part, styles, inputs, onToggle, onInput }) {
   );
 }
 
+// ─── 匯率換算（港幣/歐元 → 台幣，當日匯率） ─────────────────────────────────────
+function useExchangeRate(currency) {
+  const [state, setState] = useState({ rate: null, date: null, loading: false, error: "" });
+  useEffect(() => {
+    if (currency === "TWD") { setState({ rate: null, date: null, loading: false, error: "" }); return; }
+    let cancelled = false;
+    setState(s => ({ ...s, loading: true, error: "" }));
+    fetch(`/api/expense?action=exchange-rate&currency=${currency}`)
+      .then(r => r.json())
+      .then(d => {
+        if (cancelled) return;
+        if (d.success) setState({ rate: d.rate, date: d.date, loading: false, error: "" });
+        else setState({ rate: null, date: null, loading: false, error: d.error || "查詢失敗" });
+      })
+      .catch(() => { if (!cancelled) setState({ rate: null, date: null, loading: false, error: "查詢失敗" }); });
+    return () => { cancelled = true; };
+  }, [currency]);
+  return state;
+}
+const CURRENCY_LABEL = { TWD: "台幣", HKD: "港幣", EUR: "歐元" };
+
 // ─── Card Component ───────────────────────────────────────────────────────────
 function CardBlock({ card, cardIndex, onUpdate, onRemove }) {
   const C = useTheme();
   const cfg = CARD_TYPES[card.type];
   const color = cfg.color;
   const { fabricTotal, gongben, bs, pr, suggested, actual } = calcCard(card);
+  const currency = card.ppyCurrency || "TWD";
+  const { rate, date: rateDate, loading: rateLoading, error: rateError } = useExchangeRate(currency);
+
+  // 外幣輸入 → 自動換算台幣單碼價（card.ppy 永遠是換算後的台幣值，定價計算不用改）
+  useEffect(() => {
+    if (currency === "TWD" || !rate || !card.ppyForeign) return;
+    const converted = Math.round(parseFloat(card.ppyForeign) * rate);
+    if (converted !== card.ppy) onUpdate({ ...card, ppy: converted });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currency, rate, card.ppyForeign]);
 
   const toggleStyle = (part, cat, opt, multi) => {
     const partStyles = card.partStyles[part] || {};
@@ -357,12 +388,39 @@ function CardBlock({ card, cardIndex, onUpdate, onRemove }) {
         {/* 布料 */}
         <div style={{marginTop:14, padding:"12px 14px", background:C.mid+"88", borderRadius:10, border:`1px solid ${C.border}`}}>
           <div style={{fontSize:11, color:color, fontWeight:700, marginBottom:10}}>🧵 布料</div>
+
+          {/* 幣別選擇 */}
+          <div style={{display:"flex", gap:6, marginBottom:8}}>
+            {["TWD","HKD","EUR"].map(cur=>(
+              <button key={cur} onClick={()=>onUpdate({...card, ppyCurrency:cur, ...(cur==="TWD"?{ppyForeign:undefined}:{})})} style={{
+                cursor:"pointer", borderRadius:6, fontSize:11, fontWeight:700, padding:"5px 10px",
+                border:`1px solid ${currency===cur?color:C.border}`,
+                background:currency===cur?color+"22":C.card, color:currency===cur?color:C.sage,
+              }}>{CURRENCY_LABEL[cur]}</button>
+            ))}
+            {currency!=="TWD" && (
+              <span style={{fontSize:10, color:rateError?C.red:C.sage, alignSelf:"center", marginLeft:2}}>
+                {rateLoading ? "查匯率中..." : rateError ? `⚠️ ${rateError}` : rate ? `今日匯率 1${currency}≈${rate.toFixed(3)}TWD` : ""}
+              </span>
+            )}
+          </div>
+
           <div style={{display:"flex", gap:10, marginBottom:8}}>
-            <TxtIn label={`單碼價`} type="number" value={card.ppy||""}
-              onChange={v=>onUpdate({...card,ppy:v})} placeholder="元/碼" style={{flex:1}} />
+            {currency==="TWD" ? (
+              <TxtIn label={`單碼價`} type="number" value={card.ppy||""}
+                onChange={v=>onUpdate({...card,ppy:v})} placeholder="元/碼" style={{flex:1}} />
+            ) : (
+              <TxtIn label={`單碼價（${CURRENCY_LABEL[currency]}）`} type="number" value={card.ppyForeign||""}
+                onChange={v=>onUpdate({...card,ppyForeign:v})} placeholder={`${currency}/碼`} style={{flex:1}} />
+            )}
             <TxtIn label={`碼數（預設${DEF_YARDS[card.type]}碼）`} type="number" value={card.yards||""}
               onChange={v=>onUpdate({...card,yards:v})} placeholder={String(DEF_YARDS[card.type])} style={{flex:1}} />
           </div>
+          {currency!=="TWD" && card.ppyForeign && rate && (
+            <div style={{fontSize:11, color:C.sage, marginBottom:8}}>
+              換算台幣單碼價：<span style={{color, fontWeight:700}}>${(card.ppy||0).toLocaleString()}</span> / 碼
+            </div>
+          )}
           {fabricTotal>0 && (
             <div style={{fontSize:12, color:C.sage, marginBottom:6}}>
               布料總價：<span style={{color:color, fontWeight:700, fontFamily:"Georgia,serif"}}>${fabricTotal.toLocaleString()}</span>

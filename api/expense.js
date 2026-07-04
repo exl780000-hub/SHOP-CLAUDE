@@ -1,8 +1,41 @@
 import { DB, createPage, queryDatabase, prop, cors, monthStr } from "./_notion.js";
 
+// 即時匯率查詢快取（同一次 function 執行期間內共用，減少重複打外部 API）
+const rateCache = {};
+
+async function getExchangeRate(currency) {
+  const today = new Date().toISOString().slice(0, 10);
+  const cacheKey = `${currency}-${today}`;
+  if (rateCache[cacheKey]) return rateCache[cacheKey];
+
+  const r = await fetch(`https://open.er-api.com/v6/latest/${currency}`);
+  const d = await r.json();
+  if (d.result !== "success" || !d.rates?.TWD) throw new Error("匯率查詢失敗");
+
+  const result = { rate: d.rates.TWD, date: d.time_last_update_utc };
+  rateCache[cacheKey] = result;
+  return result;
+}
+
 export default async function handler(req, res) {
   cors(res);
   if (req.method === "OPTIONS") return res.status(200).end();
+
+  // 即時匯率查詢（港幣/歐元 → 台幣，當日匯率）
+  if (req.method === "GET" && req.query.action === "exchange-rate") {
+    try {
+      const currency = String(req.query.currency || "").toUpperCase();
+      if (!["HKD", "EUR"].includes(currency)) {
+        return res.status(400).json({ success: false, error: "currency 必須是 HKD 或 EUR" });
+      }
+      const { rate, date } = await getExchangeRate(currency);
+      return res.status(200).json({ success: true, currency, rate, date });
+    } catch (err) {
+      console.error("exchange-rate error:", err);
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
   if (req.method !== "POST") return res.status(405).json({ success: false, error: "Method not allowed" });
 
   try {
