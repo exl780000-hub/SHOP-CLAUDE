@@ -50,7 +50,41 @@ export default async function handler(req, res) {
     }
 
     await updatePage(orderId, props);
-    return res.status(200).json({ success: true, message: "更新成功" });
+
+    // 工資同步派工單：訂單工資 → 對應派工單的工資金額＋工資確認（月結讀派工單，避免兩套數字）
+    const synced = [];
+    const missing = [];
+    if (jacketWage != null || trouserWage != null || managerFee != null) {
+      const WAGE_TO_DISPATCH = [
+        { wage: jacketWage,  types: ["👔 外套製作單"], label: "外套" },
+        { wage: trouserWage, types: ["👖 褲子製作單"], label: "褲子" },
+        { wage: managerFee,  types: ["📐 打版單"],     label: "經理" },
+      ];
+      try {
+        const dispatchData = await queryDatabase(DB.dispatch, {
+          property: "訂單", relation: { contains: orderId },
+        });
+        const month = new Date().toISOString().slice(0, 7);
+        for (const { wage, types, label } of WAGE_TO_DISPATCH) {
+          if (wage == null) continue;
+          const targets = dispatchData.results.filter(p => types.includes(p.properties["派工類型"]?.select?.name || ""));
+          if (targets.length === 0) { missing.push(label); continue; }
+          for (const t of targets) {
+            const existingMonth = t.properties["結算月份"]?.rich_text?.[0]?.plain_text || "";
+            await updatePage(t.id, {
+              "工資金額": prop.number(Number(wage)),
+              "工資確認": prop.checkbox(true),
+              ...(existingMonth ? {} : { "結算月份": prop.text(month) }),
+            });
+            synced.push(label);
+          }
+        }
+      } catch (e) {
+        console.warn("wage dispatch sync failed:", e.message);
+      }
+    }
+
+    return res.status(200).json({ success: true, message: "更新成功", syncedDispatches: synced, missingDispatches: missing });
   } catch (err) {
     console.error("update-order error:", err);
     return res.status(500).json({ success: false, error: err.message });

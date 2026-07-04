@@ -74,11 +74,13 @@ export function calcWages(cards) {
     // 外套師傅工資
     if (["二件式", "三件式", "外套"].includes(c.type)) {
       let w = 7000;
-      const btnCount = parseInt(pi["排扣扣數"]) || 0;
-      if (btnCount > 0) w += btnCount * 80;                             // 扣眼 80/顆
-      if ((ps["排扣"] || []).includes("雙排釦")) w += 600;              // 雙排
-      if ((ps["眼型"] || []).includes("米蘭眼") && btnCount > 0)
-        w += btnCount * 100;                                            // 米蘭眼 100/顆
+      const doubles = (ps["排扣"] || []).includes("雙排釦");
+      // 扣眼數：前身（單排=扣數、預設2；雙排常見6扣2/6扣3=3顆）＋袖扣×雙手（袖3扣=6、袖4扣=8）
+      const frontHoles  = doubles ? 3 : (parseInt(pi["排扣扣數"]) || 2);
+      const sleeveHoles = (parseInt(pi["袖口扣數"]) || 0) * 2;
+      w += (frontHoles + sleeveHoles) * 80;                             // 扣眼 80/顆
+      if (doubles) w += 600;                                            // 雙排
+      if ((ps["眼型"] || []).includes("米蘭眼")) w += 100;              // 米蘭眼通常 1 顆 100
       if ((ps["特殊"] || []).includes("票帶")) w += 100;
       if ((ps["領型"] || []).includes("劍領")) w += 300;
       if ((ps["特殊"] || []).includes("半裡")) w += 300;

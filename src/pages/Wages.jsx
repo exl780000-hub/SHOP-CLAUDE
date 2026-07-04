@@ -25,19 +25,24 @@ function detectItem(items = "") {
 }
 
 // 從 jacketStyle 文字（｜分隔）解析出加價項目
+// 扣眼規則：前身（單排=扣數、預設2；雙排常見6扣2/6扣3=3顆）＋袖扣×雙手（袖3扣=6、袖4扣=8）；米蘭眼通常 1 顆
 function parseJacketStyle(styleText = "") {
-  const m = styleText.match(/扣(\d+)/);
-  const btnCount = m ? parseInt(m[1]) : 0;
+  const doubles = styleText.includes("雙排釦");
+  const milan = styleText.includes("米蘭眼");
+  const frontM = styleText.match(/(?:^|｜)扣(\d+)/);
+  const sleeveM = styleText.match(/袖扣(\d+)/);
+  const frontHoles = doubles ? 3 : (frontM ? parseInt(frontM[1]) : 2);
+  const sleeveHoles = (sleeveM ? parseInt(sleeveM[1]) : 0) * 2;
   return {
-    doubles:     styleText.includes("雙排釦"),
-    milan:       styleText.includes("米蘭眼"),
+    doubles,
+    milan,
     ticket:      styleText.includes("票帶"),
     sword:       styleText.includes("劍領"),
     half:        styleText.includes("半裡"),
     full:        styleText.includes("全單"),
     overcoat:    styleText.includes("大衣"),
-    buttonholes: btnCount,
-    milanHoles:  styleText.includes("米蘭眼") ? btnCount : 0,
+    buttonholes: frontHoles + sleeveHoles,
+    milanHoles:  milan ? 1 : 0,
   };
 }
 
@@ -481,6 +486,7 @@ export default function Wages() {
   const [customStart, setCustomStart] = useState("");
   const [customEnd, setCustomEnd] = useState("");
   const [tailor, setTailor] = useState("全部");
+  const [dispatches, setDispatches] = useState([]);
 
   const loadOrders = async () => {
     try {
@@ -490,28 +496,53 @@ export default function Wages() {
     } catch (e) { console.error(e); }
   };
 
-  const loadDispatchedIds = async (selectedTailor) => {
-    if (selectedTailor === "全部") { setDispatchedOrderIds(null); return; }
+  const loadDispatches = async () => {
     try {
-      const r = await fetch(`/api/dispatches?tailor=${encodeURIComponent(selectedTailor)}`);
+      const r = await fetch("/api/dispatches");
       const d = await r.json();
-      const ids = new Set((d.dispatches || []).flatMap(dp => dp.orderRel || []));
-      setDispatchedOrderIds(ids);
-    } catch (e) { setDispatchedOrderIds(null); }
+      setDispatches(d.dispatches || []);
+    } catch (e) { console.error(e); }
   };
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([loadOrders(), loadDispatchedIds(tailor)]).finally(() => setLoading(false));
+    Promise.all([loadOrders(), loadDispatches()]).finally(() => setLoading(false));
   }, []);
 
-  const handleTailorChange = async (t) => {
-    setTailor(t);
-    await loadDispatchedIds(t);
+  const handleTailorChange = (t) => setTailor(t);
+
+  // 師傅篩選：有該師傅派工單的訂單
+  useEffect(() => {
+    if (tailor === "全部") { setDispatchedOrderIds(null); return; }
+    const ids = new Set(dispatches.filter(dp => dp.tailor === tailor).flatMap(dp => dp.orderRel || []));
+    setDispatchedOrderIds(ids);
+  }, [tailor, dispatches]);
+
+  // 每筆訂單的派工單工資同步狀態
+  const WAGE_DISPATCH_TYPES = { jacket: "👔 外套製作單", trouser: "👖 褲子製作單", manager: "📐 打版單" };
+  const dispByOrder = {};
+  dispatches.forEach(dp => {
+    (dp.orderRel || []).forEach(oid => {
+      if (!dispByOrder[oid]) dispByOrder[oid] = [];
+      dispByOrder[oid].push(dp);
+    });
+  });
+  const wageSyncStatus = (orderId) => {
+    const list = dispByOrder[orderId] || [];
+    const relevantTypes = tailor === "外套師傅" ? [WAGE_DISPATCH_TYPES.jacket]
+      : tailor === "褲子師傅" ? [WAGE_DISPATCH_TYPES.trouser]
+      : tailor === "經理" ? [WAGE_DISPATCH_TYPES.manager]
+      : Object.values(WAGE_DISPATCH_TYPES);
+    const relevant = list.filter(dp => relevantTypes.includes(dp.type));
+    if (relevant.length === 0) return { key: "none", label: "❔ 尚未派工", color: C.border };
+    return relevant.every(dp => dp.wageConfirmed)
+      ? { key: "ok", label: "✅ 已確認可月結", color: C.green }
+      : { key: "pending", label: "⚠️ 工資未確認", color: C.gold };
   };
 
   const handleSaved = (orderId, updated) => {
     setOrders(prev => prev.map(o => o.id === orderId ? { ...o, ...updated } : o));
+    loadDispatches(); // 儲存會同步派工單工資，重抓確認狀態
   };
 
   const inRange = (dateStr) => {
@@ -627,7 +658,191 @@ export default function Wages() {
       {loading && <div style={{ color: C.sage, textAlign: "center", padding: 30 }}>載入中...</div>}
       {!loading && filtered.length === 0 && <div style={{ color: C.sage, textAlign: "center", padding: 40 }}>此區間無派工記錄</div>}
 
-      {filtered.map(o => renderCard(o))}
+      <div style={isWide ? { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(400px, 1fr))", gap: 12, alignItems: "start" } : undefined}>
+        {filtered.map(o => {
+          const st = wageSyncStatus(o.id);
+          return (
+            <div key={o.id}>
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 3 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: st.color, background: st.color + "18",
+                  border: `1px solid ${st.color}44`, borderRadius: 10, padding: "1px 8px" }}>{st.label}</span>
+              </div>
+              {renderCard(o)}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 修改單／背心單工資（不在訂單工資欄位內，直接填在派工單上） */}
+      <ExtraDispatchWages dispatches={dispatches} tailor={tailor} orders={orders} onSaved={loadDispatches} />
+
+      {/* 師傅工資月結 */}
+      <div style={{ marginTop: 18 }}>
+        <WageSettlement month={timeMode === "month" ? selectedMonth : monthStr(0)} />
+      </div>
+    </div>
+  );
+}
+
+// ─── 修改單／背心單工資 ────────────────────────────────────────────────────────
+const EXTRA_WAGE_TYPES = ["✂️ 外套修改單", "✂️ 褲子修改單", "🦺 背心製作單"];
+const EXTRA_WAGE_HINT = {
+  "🦺 背心製作單": "背心：褲師傅1900／外套師傅單排2200、雙排2500",
+  "✂️ 外套修改單": "肩領300、袖子200、腰身250、袖長單手80/雙手160",
+  "✂️ 褲子修改單": "腰身250、褲長100、褲腳100、褲管150、臀圍200",
+};
+
+function ExtraDispatchWages({ dispatches, tailor, orders, onSaved }) {
+  const C = useTheme();
+  const [editVals, setEditVals] = useState({});
+  const [savingId, setSavingId] = useState(null);
+
+  const orderName = (oid) => orders.find(o => o.id === oid)?.name || "";
+  const list = dispatches.filter(dp =>
+    EXTRA_WAGE_TYPES.includes(dp.type) && (tailor === "全部" || dp.tailor === tailor)
+  );
+  if (list.length === 0) return null;
+
+  const save = async (dp) => {
+    const wage = editVals[dp.id];
+    if (wage == null || wage === "") return;
+    setSavingId(dp.id);
+    try {
+      const r = await fetch("/api/update-dispatch", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dispatchId: dp.id, wage: Number(wage), wageConfirmed: true, month: new Date().toISOString().slice(0, 7) }),
+      });
+      const d = await r.json();
+      if (!d.success) throw new Error(d.error);
+      setEditVals(p => { const n = { ...p }; delete n[dp.id]; return n; });
+      onSaved();
+    } catch (e) { alert("儲存失敗：" + e.message); }
+    setSavingId(null);
+  };
+
+  return (
+    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "14px 16px", marginTop: 18, boxShadow: C.shadowCard }}>
+      <div style={{ fontSize: 12, color: C.gold, fontWeight: 700, marginBottom: 4 }}>✂️ 修改單／背心單工資</div>
+      <div style={{ fontSize: 10, color: C.sage, marginBottom: 10 }}>這些工資直接記在派工單上，會一起進月結</div>
+      {list.map(dp => {
+        const val = editVals[dp.id] ?? (dp.wage || "");
+        const dirty = editVals[dp.id] != null && String(editVals[dp.id]) !== String(dp.wage || "");
+        return (
+          <div key={dp.id} style={{ borderBottom: `1px solid ${C.border}44`, padding: "8px 0" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: C.ivory, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {dp.type}｜{orderName(dp.orderRel?.[0]) || dp.name}
+                </div>
+                <div style={{ fontSize: 10, color: C.sage, marginTop: 2 }}>
+                  {dp.tailor}・{dp.status}{dp.wageConfirmed ? "・✅ 已確認" : ""}
+                </div>
+              </div>
+              <input type="number" value={val} placeholder="工資"
+                onChange={e => setEditVals(p => ({ ...p, [dp.id]: e.target.value }))}
+                style={{ width: 90, background: C.mid, border: `1px solid ${dirty ? C.gold : C.border}`, borderRadius: 8,
+                  padding: "7px 10px", color: C.gold, fontSize: 14, fontWeight: 700, outline: "none", textAlign: "right" }} />
+              {dirty && (
+                <button onClick={() => save(dp)} disabled={savingId === dp.id} style={{
+                  background: savingId === dp.id ? C.mid : C.green, color: savingId === dp.id ? C.sage : "#fff",
+                  border: "none", borderRadius: 8, padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer",
+                }}>{savingId === dp.id ? "…" : "存"}</button>
+              )}
+            </div>
+            <div style={{ fontSize: 10, color: C.border, marginTop: 3 }}>{EXTRA_WAGE_HINT[dp.type]}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── 師傅工資月結（自月報表頁搬移至此） ────────────────────────────────────────
+function WageSettlement({ month }) {
+  const C = useTheme();
+  const [data, setData] = useState(null);
+  const [loadingWS, setLoadingWS] = useState(false);
+  const [settling, setSettling] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const load = async () => {
+    setLoadingWS(true); setResult(null);
+    try {
+      const r = await fetch(`/api/wage-settlement?month=${month}`);
+      const d = await r.json();
+      if (d.success) setData(d);
+    } catch (e) { console.error(e); }
+    setLoadingWS(false);
+  };
+
+  const settle = async () => {
+    if (!data?.byTailor?.length) return;
+    setSettling(true);
+    try {
+      const r = await fetch("/api/wage-settlement", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ month, tailors: data.byTailor.map(t => ({ tailor: t.tailor, total: t.total })) }),
+      });
+      const d = await r.json();
+      setResult({ ok: d.success, msg: d.success ? d.message : d.error });
+    } catch (e) { setResult({ ok: false, msg: e.message }); }
+    setSettling(false);
+  };
+
+  if (!data && !loadingWS) {
+    return (
+      <button onClick={load} style={{ width: "100%", padding: "12px", borderRadius: 10,
+        border: `1px solid ${C.border}`, background: "transparent", color: C.sage, fontSize: 13,
+        fontWeight: 600, cursor: "pointer" }}>🧾 載入 {month} 工資月結預覽</button>
+    );
+  }
+
+  return (
+    <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "14px 16px", boxShadow: C.shadowCard }}>
+      <div style={{ fontSize: 12, color: C.gold, fontWeight: 700, marginBottom: 12 }}>🧾 師傅工資月結（{month}）</div>
+      {loadingWS && <div style={{ color: C.sage, fontSize: 13 }}>載入中...</div>}
+      {data && !loadingWS && (
+        <>
+          {data.byTailor.length === 0 ? (
+            <div style={{ color: C.sage, fontSize: 13 }}>本月無已完成且確認工資的派工單</div>
+          ) : (
+            <>
+              {data.byTailor.map(t => (
+                <div key={t.tailor} style={{ marginBottom: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: C.ivory }}>{t.tailor}</span>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: C.gold, fontFamily: "Georgia,serif" }}>${t.total.toLocaleString()}</span>
+                  </div>
+                  {t.items.map(item => (
+                    <div key={item.id} style={{ display: "flex", justifyContent: "space-between", padding: "3px 8px", borderLeft: `2px solid ${C.border}` }}>
+                      <span style={{ fontSize: 11, color: C.sage }}>{item.name}</span>
+                      <span style={{ fontSize: 11, color: C.ivory }}>${item.wage.toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderTop: `1px solid ${C.border}`, marginBottom: 10 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: C.ivory }}>工資合計</span>
+                <span style={{ fontSize: 16, fontWeight: 700, color: C.gold, fontFamily: "Georgia,serif" }}>${data.total.toLocaleString()}</span>
+              </div>
+              {result && (
+                <div style={{ marginBottom: 8, padding: "8px 12px", borderRadius: 8,
+                  background: (result.ok ? C.green : C.red) + "22", fontSize: 12, fontWeight: 700,
+                  color: result.ok ? C.green : C.red }}>
+                  {result.ok ? "✅ " : "❌ "}{result.msg}
+                </div>
+              )}
+              {!result?.ok && (
+                <button onClick={settle} disabled={settling} style={{ width: "100%", padding: "10px",
+                  borderRadius: 8, border: "none", background: settling ? C.mid : C.green,
+                  color: settling ? C.sage : "#fff", fontSize: 13, fontWeight: 700, cursor: settling ? "default" : "pointer" }}>
+                  {settling ? "結算中..." : `確認結算 ${month}`}
+                </button>
+              )}
+            </>
+          )}
+        </>
+      )}
     </div>
   );
 }
