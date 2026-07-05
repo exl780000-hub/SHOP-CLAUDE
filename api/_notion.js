@@ -28,10 +28,23 @@ async function notionFetch(path, options = {}) {
 }
 
 export async function queryDatabase(databaseId, filter) {
-  return notionFetch(`databases/${databaseId}/query`, {
-    method: "POST",
-    body: JSON.stringify(filter ? { filter } : {}),
-  });
+  // Notion 單次查詢上限 100 筆；自動翻頁把所有結果接起來（安全上限 10 頁 = 1000 筆）
+  const results = [];
+  let cursor = undefined;
+  for (let page = 0; page < 10; page++) {
+    const data = await notionFetch(`databases/${databaseId}/query`, {
+      method: "POST",
+      body: JSON.stringify({
+        ...(filter ? { filter } : {}),
+        page_size: 100,
+        ...(cursor ? { start_cursor: cursor } : {}),
+      }),
+    });
+    results.push(...data.results);
+    if (!data.has_more) break;
+    cursor = data.next_cursor;
+  }
+  return { results };
 }
 
 export async function createPage(databaseId, properties) {
