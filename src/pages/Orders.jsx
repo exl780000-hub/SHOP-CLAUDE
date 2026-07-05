@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useTheme } from "../theme.jsx";
 import { useIsWide } from "../useIsWide.js";
 
@@ -40,6 +40,9 @@ function StuckBadge({ days, C }) {
 export default function Orders() {
   const C = useTheme();
   const isWide = useIsWide();
+  const [viewPref, setViewPref] = useState(() => localStorage.getItem("gony-orders-view") || null);
+  const view = viewPref || (isWide ? "table" : "card"); // 寬螢幕預設表格
+  const setView = (v) => { setViewPref(v); localStorage.setItem("gony-orders-view", v); };
   const flowColor = (f) => FLOW_COLOR_FIXED[f] || C.gold;
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -175,181 +178,13 @@ export default function Orders() {
   const tierOngoing = filtered.filter(o => !isArchived(o) && !isDone(o) && (daysSince(o.flowUpdatedAt) ?? 0) < 5).sort(byDateDesc);
   const tierArchived = filtered.filter(isArchived).sort(byDateDesc);
 
-  const StyleRow = ({ label, value }) => {
-    if (!value) return null;
+  // 展開詳情（卡片與表格檢視共用）
+  const renderDetail = (o) => {
+    const balance = (o.actualPrice || 0) - (o.deposit || 0);
+    const balanceOwed = o.balancePending || (balance > 0 && !collectedIds.has(o.id) && o.balancePending !== false);
+    const meas = measurement[o.id];
+    const measLoading = loadingMeas[o.id];
     return (
-      <div style={{ marginBottom: 8 }}>
-        <div style={{ fontSize: 11, color: C.sage, marginBottom: 3 }}>{label}</div>
-        <div style={{ fontSize: 12, color: C.ivory, whiteSpace: "pre-wrap", lineHeight: 1.6,
-          background: C.mid, borderRadius: 6, padding: "7px 10px" }}>{value}</div>
-      </div>
-    );
-  };
-
-  const WageItem = ({ label, value }) => {
-    if (!value) return null;
-    return (
-      <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: `1px solid ${C.border}` }}>
-        <span style={{ fontSize: 12, color: C.sage }}>{label}</span>
-        <span style={{ fontSize: 12, color: C.ivory, fontFamily: "Georgia,serif" }}>${Number(value).toLocaleString()}</span>
-      </div>
-    );
-  };
-
-  return (
-    <div style={{ maxWidth: isWide?1100:520, margin: "0 auto", padding: "14px 14px 80px" }}>
-
-      {/* 搜尋（即時篩選） */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-        <input value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="🔍 輸入客戶名稱或訂單編號即時篩選"
-          style={{ flex: 1, background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "10px 14px", color: C.ivory, fontSize: 14, outline: "none" }} />
-        {search && (
-          <button onClick={() => setSearch("")}
-            style={{ background: "transparent", color: C.sage, border: `1px solid ${C.border}`, borderRadius: 10, padding: "10px 14px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>✕</button>
-        )}
-      </div>
-
-      {/* 篩選 */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "center" }}>
-        {FILTER_OPTS.map(f => (
-          <button key={f} onClick={() => setFilter(f)} style={{
-            cursor: "pointer", borderRadius: 8, fontSize: 12, fontWeight: 600, padding: "6px 14px",
-            border: `1px solid ${filter === f ? C.gold : C.border}`,
-            background: filter === f ? C.gold + "22" : "transparent",
-            color: filter === f ? C.gold : C.sage,
-          }}>
-            {f}
-            {f === "進行中" && orders.filter(o => o.flow !== "🎉 完成訂單").length > 0 && (
-              <span style={{ marginLeft: 5, background: C.gold, color: C.bg, borderRadius: 10, padding: "1px 6px", fontSize: 10, fontWeight: 700 }}>
-                {orders.filter(o => o.flow !== "🎉 完成訂單").length}
-              </span>
-            )}
-          </button>
-        ))}
-        <button onClick={() => setShowMore(v => !v)} style={{
-          marginLeft: "auto", cursor: "pointer", borderRadius: 8, fontSize: 12, fontWeight: 600, padding: "6px 12px",
-          border: `1px solid ${moreFiltersActive ? C.gold : C.border}`,
-          background: moreFiltersActive ? C.gold + "22" : "transparent",
-          color: moreFiltersActive ? C.gold : C.sage,
-        }}>🔍 進階篩選{moreFiltersActive ? " ●" : ""}</button>
-      </div>
-
-      {/* 進階篩選 */}
-      {showMore && (
-        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
-          <div style={{ fontSize: 11, color: C.sage, fontWeight: 700, marginBottom: 6 }}>流程階段</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
-            {["全部", ...FLOW_STEPS].map(s => (
-              <button key={s} onClick={() => setStageFilter(s)} style={{
-                cursor: "pointer", borderRadius: 6, fontSize: 11, fontWeight: 600, padding: "5px 10px",
-                border: `1px solid ${stageFilter === s ? C.gold : C.border}`,
-                background: stageFilter === s ? C.gold + "22" : C.mid,
-                color: stageFilter === s ? C.gold : C.sage,
-              }}>{s}</button>
-            ))}
-          </div>
-
-          <div style={{ fontSize: 11, color: C.sage, fontWeight: 700, marginBottom: 6 }}>品項</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
-            {["全部", ...itemOptions].map(it => (
-              <button key={it} onClick={() => setItemFilter(it)} style={{
-                cursor: "pointer", borderRadius: 6, fontSize: 11, fontWeight: 600, padding: "5px 10px",
-                border: `1px solid ${itemFilter === it ? C.gold : C.border}`,
-                background: itemFilter === it ? C.gold + "22" : C.mid,
-                color: itemFilter === it ? C.gold : C.sage,
-              }}>{it}</button>
-            ))}
-          </div>
-
-          <div style={{ fontSize: 11, color: C.sage, fontWeight: 700, marginBottom: 6 }}>訂單日期區間</div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: moreFiltersActive ? 12 : 0 }}>
-            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
-              style={{ flex: 1, background: C.mid, border: `1px solid ${C.border}`, borderRadius: 6, padding: "6px 8px", color: C.ivory, fontSize: 12, outline: "none" }} />
-            <span style={{ color: C.sage, fontSize: 12 }}>至</span>
-            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
-              style={{ flex: 1, background: C.mid, border: `1px solid ${C.border}`, borderRadius: 6, padding: "6px 8px", color: C.ivory, fontSize: 12, outline: "none" }} />
-          </div>
-
-          {moreFiltersActive && (
-            <button onClick={clearMoreFilters} style={{
-              width: "100%", padding: "8px", borderRadius: 8, border: `1px solid ${C.border}`,
-              background: "transparent", color: C.sage, fontSize: 12, fontWeight: 600, cursor: "pointer",
-            }}>清除進階篩選</button>
-          )}
-        </div>
-      )}
-
-      {loading && <div style={{ color: C.sage, textAlign: "center", padding: 30 }}>載入中...</div>}
-
-      {!loading && filtered.length === 0 && (
-        <div style={{ color: C.sage, textAlign: "center", padding: 40 }}>沒有找到訂單</div>
-      )}
-
-      {[
-        { key: "action",   title: `🔴 需要處理（${tierAction.length}）`,     list: tierAction,   color: C.red },
-        { key: "ongoing",  title: `🚧 進行中（${tierOngoing.length}）`,      list: tierOngoing,  color: C.gold },
-        { key: "archived", title: `✅ 已完成歸檔（${tierArchived.length}）`, list: tierArchived, color: C.green, slim: true },
-      ].map(sec => sec.list.length === 0 ? null : (
-      <div key={sec.key} style={{ marginBottom: 18 }}>
-      <div style={{ fontSize: 12, fontWeight: 700, color: sec.color, marginBottom: 8, letterSpacing: "0.05em" }}>{sec.title}</div>
-      <div style={isWide ? { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: 12, alignItems: "start" } : undefined}>
-      {sec.list.map(o => {
-        const isOpen = expanded === o.id;
-        const fc = flowColor(o.flow);
-        const balance = (o.actualPrice || 0) - (o.deposit || 0);
-        const meas = measurement[o.id];
-        const measLoading = loadingMeas[o.id];
-        const stuckDays = (!isDone(o) && !isArchived(o)) ? daysSince(o.flowUpdatedAt) : null;
-        const balanceOwed = o.balancePending || (balance > 0 && !collectedIds.has(o.id) && o.balancePending !== false);
-        const slimRow = sec.slim && !isOpen;
-
-        return (
-          <div key={o.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, marginBottom: isWide?0:(slimRow?6:10), overflow: "hidden", boxShadow: slimRow ? "none" : C.shadowCard, opacity: slimRow ? 0.75 : 1, gridColumn: isWide && isOpen ? "1 / -1" : undefined }}>
-
-            {/* 訂單列表行 */}
-            {slimRow ? (
-              <div onClick={() => handleExpand(o.id)}
-                style={{ padding: "9px 14px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-                <div style={{ fontSize: 12, fontWeight: 600, color: C.sage, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{o.name}</div>
-                <span style={{ fontSize: 11, color: C.border, flexShrink: 0 }}>{o.date}</span>
-                {o.actualPrice ? <span style={{ fontSize: 12, fontWeight: 700, color: C.sage, fontFamily: "Georgia,serif", flexShrink: 0 }}>${Number(o.actualPrice).toLocaleString()}</span> : null}
-              </div>
-            ) : (
-            <div onClick={() => handleExpand(o.id)}
-              style={{ padding: "12px 16px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{o.name}</div>
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                  {o.items && <span style={{ fontSize: 11, color: C.sage }}>{o.items}</span>}
-                  {o.date && <span style={{ fontSize: 11, color: C.border }}>·</span>}
-                  {o.date && <span style={{ fontSize: 11, color: C.sage }}>{o.date}</span>}
-                  {balanceOwed && !isArchived(o) && (
-                    <span style={{ fontSize: 10, fontWeight: 700, color: C.red, background: C.red + "18", border: `1px solid ${C.red}44`, borderRadius: 10, padding: "1px 7px" }}>
-                      💰 尾款未收 ${Number(balance).toLocaleString()}
-                    </span>
-                  )}
-                  {isDone(o) && !isArchived(o) && o.wageUnconfirmedCount > 0 && (
-                    <span style={{ fontSize: 10, fontWeight: 700, color: C.gold, background: C.gold + "18", border: `1px solid ${C.gold}44`, borderRadius: 10, padding: "1px 7px" }}>
-                      🧾 {o.wageUnconfirmedCount} 筆工資未確認
-                    </span>
-                  )}
-                </div>
-              </div>
-              <div style={{ textAlign: "right", marginLeft: 10, flexShrink: 0 }}>
-                {o.actualPrice ? (
-                  <div style={{ fontSize: 14, fontWeight: 700, color: C.gold, fontFamily: "Georgia,serif" }}>
-                    ${Number(o.actualPrice).toLocaleString()}
-                  </div>
-                ) : null}
-                <div style={{ fontSize: 11, fontWeight: 700, color: fc, marginTop: 3 }}>{isArchived(o) ? "🎉 完成取件" : (o.flow || o.status)}</div>
-                {stuckDays != null && <div style={{ marginTop: 4 }}><StuckBadge days={stuckDays} C={C} /></div>}
-              </div>
-            </div>
-            )}
-
-            {/* 展開詳情 */}
-            {isOpen && (
               <div style={{ borderTop: `1px solid ${C.border}`, padding: "14px 16px" }}>
 
                 {/* 完成收尾清單：完成訂單但尚未歸檔 */}
@@ -499,11 +334,258 @@ export default function Orders() {
                   📝 在 Notion 查看完整訂單
                 </a>
               </div>
+    );
+  };
+
+  const StyleRow = ({ label, value }) => {
+    if (!value) return null;
+    return (
+      <div style={{ marginBottom: 8 }}>
+        <div style={{ fontSize: 11, color: C.sage, marginBottom: 3 }}>{label}</div>
+        <div style={{ fontSize: 12, color: C.ivory, whiteSpace: "pre-wrap", lineHeight: 1.6,
+          background: C.mid, borderRadius: 6, padding: "7px 10px" }}>{value}</div>
+      </div>
+    );
+  };
+
+  const WageItem = ({ label, value }) => {
+    if (!value) return null;
+    return (
+      <div style={{ display: "flex", justifyContent: "space-between", padding: "4px 0", borderBottom: `1px solid ${C.border}` }}>
+        <span style={{ fontSize: 12, color: C.sage }}>{label}</span>
+        <span style={{ fontSize: 12, color: C.ivory, fontFamily: "Georgia,serif" }}>${Number(value).toLocaleString()}</span>
+      </div>
+    );
+  };
+
+  return (
+    <div style={{ maxWidth: isWide?1100:520, margin: "0 auto", padding: "14px 14px 80px" }}>
+
+      {/* 搜尋（即時篩選） */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+        <input value={search} onChange={e => setSearch(e.target.value)}
+          placeholder="🔍 輸入客戶名稱或訂單編號即時篩選"
+          style={{ flex: 1, background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "10px 14px", color: C.ivory, fontSize: 14, outline: "none" }} />
+        {search && (
+          <button onClick={() => setSearch("")}
+            style={{ background: "transparent", color: C.sage, border: `1px solid ${C.border}`, borderRadius: 10, padding: "10px 14px", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>✕</button>
+        )}
+      </div>
+
+      {/* 篩選 */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "center" }}>
+        {FILTER_OPTS.map(f => (
+          <button key={f} onClick={() => setFilter(f)} style={{
+            cursor: "pointer", borderRadius: 8, fontSize: 12, fontWeight: 600, padding: "6px 14px",
+            border: `1px solid ${filter === f ? C.gold : C.border}`,
+            background: filter === f ? C.gold + "22" : "transparent",
+            color: filter === f ? C.gold : C.sage,
+          }}>
+            {f}
+            {f === "進行中" && orders.filter(o => o.flow !== "🎉 完成訂單").length > 0 && (
+              <span style={{ marginLeft: 5, background: C.gold, color: C.bg, borderRadius: 10, padding: "1px 6px", fontSize: 10, fontWeight: 700 }}>
+                {orders.filter(o => o.flow !== "🎉 完成訂單").length}
+              </span>
             )}
+          </button>
+        ))}
+        <button onClick={() => setView(view === "table" ? "card" : "table")} style={{
+          marginLeft: "auto", cursor: "pointer", borderRadius: 8, fontSize: 12, fontWeight: 600, padding: "6px 12px",
+          border: `1px solid ${C.border}`, background: "transparent", color: C.sage,
+        }}>{view === "table" ? "🗂 卡片" : "📊 表格"}</button>
+        <button onClick={() => setShowMore(v => !v)} style={{
+          cursor: "pointer", borderRadius: 8, fontSize: 12, fontWeight: 600, padding: "6px 12px",
+          border: `1px solid ${moreFiltersActive ? C.gold : C.border}`,
+          background: moreFiltersActive ? C.gold + "22" : "transparent",
+          color: moreFiltersActive ? C.gold : C.sage,
+        }}>🔍 進階{moreFiltersActive ? " ●" : ""}</button>
+      </div>
+
+      {/* 進階篩選 */}
+      {showMore && (
+        <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "12px 14px", marginBottom: 14 }}>
+          <div style={{ fontSize: 11, color: C.sage, fontWeight: 700, marginBottom: 6 }}>流程階段</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+            {["全部", ...FLOW_STEPS].map(s => (
+              <button key={s} onClick={() => setStageFilter(s)} style={{
+                cursor: "pointer", borderRadius: 6, fontSize: 11, fontWeight: 600, padding: "5px 10px",
+                border: `1px solid ${stageFilter === s ? C.gold : C.border}`,
+                background: stageFilter === s ? C.gold + "22" : C.mid,
+                color: stageFilter === s ? C.gold : C.sage,
+              }}>{s}</button>
+            ))}
+          </div>
+
+          <div style={{ fontSize: 11, color: C.sage, fontWeight: 700, marginBottom: 6 }}>品項</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12 }}>
+            {["全部", ...itemOptions].map(it => (
+              <button key={it} onClick={() => setItemFilter(it)} style={{
+                cursor: "pointer", borderRadius: 6, fontSize: 11, fontWeight: 600, padding: "5px 10px",
+                border: `1px solid ${itemFilter === it ? C.gold : C.border}`,
+                background: itemFilter === it ? C.gold + "22" : C.mid,
+                color: itemFilter === it ? C.gold : C.sage,
+              }}>{it}</button>
+            ))}
+          </div>
+
+          <div style={{ fontSize: 11, color: C.sage, fontWeight: 700, marginBottom: 6 }}>訂單日期區間</div>
+          <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: moreFiltersActive ? 12 : 0 }}>
+            <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+              style={{ flex: 1, background: C.mid, border: `1px solid ${C.border}`, borderRadius: 6, padding: "6px 8px", color: C.ivory, fontSize: 12, outline: "none" }} />
+            <span style={{ color: C.sage, fontSize: 12 }}>至</span>
+            <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+              style={{ flex: 1, background: C.mid, border: `1px solid ${C.border}`, borderRadius: 6, padding: "6px 8px", color: C.ivory, fontSize: 12, outline: "none" }} />
+          </div>
+
+          {moreFiltersActive && (
+            <button onClick={clearMoreFilters} style={{
+              width: "100%", padding: "8px", borderRadius: 8, border: `1px solid ${C.border}`,
+              background: "transparent", color: C.sage, fontSize: 12, fontWeight: 600, cursor: "pointer",
+            }}>清除進階篩選</button>
+          )}
+        </div>
+      )}
+
+      {loading && <div style={{ color: C.sage, textAlign: "center", padding: 30 }}>載入中...</div>}
+
+      {!loading && filtered.length === 0 && (
+        <div style={{ color: C.sage, textAlign: "center", padding: 40 }}>沒有找到訂單</div>
+      )}
+
+      {[
+        { key: "action",   title: `🔴 需要處理（${tierAction.length}）`,     list: tierAction,   color: C.red },
+        { key: "ongoing",  title: `🚧 進行中（${tierOngoing.length}）`,      list: tierOngoing,  color: C.gold },
+        { key: "archived", title: `✅ 已完成歸檔（${tierArchived.length}）`, list: tierArchived, color: C.green, slim: true },
+      ].map(sec => sec.list.length === 0 ? null : (
+      <div key={sec.key} style={{ marginBottom: 18 }}>
+      <div style={{ fontSize: 12, fontWeight: 700, color: sec.color, marginBottom: 8, letterSpacing: "0.05em" }}>{sec.title}</div>
+
+      {/* 表格檢視：一行一筆，方便整體掃視 */}
+      {view === "table" ? (
+        <div style={{ overflowX: "auto", background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, boxShadow: C.shadowCard }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 760 }}>
+            <thead>
+              <tr>
+                {["客戶 / 訂單", "品項", "日期", "流程", "提醒", "售價", "尾款"].map((h, i) => (
+                  <th key={h} style={{ textAlign: i >= 5 ? "right" : "left", padding: "8px 12px", fontSize: 10,
+                    color: C.sage, fontWeight: 700, letterSpacing: "0.05em", borderBottom: `1px solid ${C.border}`,
+                    whiteSpace: "nowrap", position: "sticky", top: 0, background: C.card }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {sec.list.map(o => {
+                const isOpen = expanded === o.id;
+                const fc = flowColor(o.flow);
+                const balance = (o.actualPrice || 0) - (o.deposit || 0);
+                const stuckDays = (!isDone(o) && !isArchived(o)) ? daysSince(o.flowUpdatedAt) : null;
+                const balanceOwed = o.balancePending || (balance > 0 && !collectedIds.has(o.id) && o.balancePending !== false);
+                const tdBase = { padding: "9px 12px", fontSize: 12, borderBottom: `1px solid ${C.border}44`, whiteSpace: "nowrap" };
+                return (
+                  <React.Fragment key={o.id}>
+                    <tr onClick={() => handleExpand(o.id)} style={{ cursor: "pointer",
+                      background: isOpen ? C.mid + "66" : "transparent", opacity: sec.slim ? 0.75 : 1 }}>
+                      <td style={{ ...tdBase, fontWeight: 700, color: C.ivory, maxWidth: 190, overflow: "hidden", textOverflow: "ellipsis" }}>{o.name}</td>
+                      <td style={{ ...tdBase, color: C.sage }}>{o.items || "—"}</td>
+                      <td style={{ ...tdBase, color: C.sage }}>{o.date || "—"}</td>
+                      <td style={{ ...tdBase, fontWeight: 700, color: fc }}>{isArchived(o) ? "🎉 完成取件" : (o.flow || o.status)}</td>
+                      <td style={tdBase}>
+                        <span style={{ display: "inline-flex", gap: 4 }}>
+                          {stuckDays != null && stuckDays >= 3 && (
+                            <span style={{ fontSize: 10, fontWeight: 700, color: stuckDays >= 5 ? C.red : C.gold }}>⏱{stuckDays}天</span>
+                          )}
+                          {balanceOwed && !isArchived(o) && (
+                            <span style={{ fontSize: 10, fontWeight: 700, color: C.red }}>💰尾款</span>
+                          )}
+                          {isDone(o) && !isArchived(o) && o.wageUnconfirmedCount > 0 && (
+                            <span style={{ fontSize: 10, fontWeight: 700, color: C.gold }}>🧾工資</span>
+                          )}
+                        </span>
+                      </td>
+                      <td style={{ ...tdBase, textAlign: "right", fontWeight: 700, color: C.gold, fontFamily: "Georgia,serif" }}>
+                        {o.actualPrice ? `$${Number(o.actualPrice).toLocaleString()}` : "—"}
+                      </td>
+                      <td style={{ ...tdBase, textAlign: "right", fontWeight: 700, fontFamily: "Georgia,serif",
+                        color: balanceOwed ? C.red : C.sage }}>
+                        {balance > 0 && balanceOwed ? `$${Number(balance).toLocaleString()}` : "—"}
+                      </td>
+                    </tr>
+                    {isOpen && (
+                      <tr>
+                        <td colSpan={7} style={{ padding: 0, borderBottom: `1px solid ${C.border}` }}>
+                          {renderDetail(o)}
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+      <div style={isWide ? { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(360px, 1fr))", gap: 12, alignItems: "start" } : undefined}>
+      {sec.list.map(o => {
+        const isOpen = expanded === o.id;
+        const fc = flowColor(o.flow);
+        const balance = (o.actualPrice || 0) - (o.deposit || 0);
+        const meas = measurement[o.id];
+        const measLoading = loadingMeas[o.id];
+        const stuckDays = (!isDone(o) && !isArchived(o)) ? daysSince(o.flowUpdatedAt) : null;
+        const balanceOwed = o.balancePending || (balance > 0 && !collectedIds.has(o.id) && o.balancePending !== false);
+        const slimRow = sec.slim && !isOpen;
+
+        return (
+          <div key={o.id} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, marginBottom: isWide?0:(slimRow?6:10), overflow: "hidden", boxShadow: slimRow ? "none" : C.shadowCard, opacity: slimRow ? 0.75 : 1, gridColumn: isWide && isOpen ? "1 / -1" : undefined }}>
+
+            {/* 訂單列表行 */}
+            {slimRow ? (
+              <div onClick={() => handleExpand(o.id)}
+                style={{ padding: "9px 14px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: C.sage, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{o.name}</div>
+                <span style={{ fontSize: 11, color: C.border, flexShrink: 0 }}>{o.date}</span>
+                {o.actualPrice ? <span style={{ fontSize: 12, fontWeight: 700, color: C.sage, fontFamily: "Georgia,serif", flexShrink: 0 }}>${Number(o.actualPrice).toLocaleString()}</span> : null}
+              </div>
+            ) : (
+            <div onClick={() => handleExpand(o.id)}
+              style={{ padding: "12px 16px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 4, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{o.name}</div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                  {o.items && <span style={{ fontSize: 11, color: C.sage }}>{o.items}</span>}
+                  {o.date && <span style={{ fontSize: 11, color: C.border }}>·</span>}
+                  {o.date && <span style={{ fontSize: 11, color: C.sage }}>{o.date}</span>}
+                  {balanceOwed && !isArchived(o) && (
+                    <span style={{ fontSize: 10, fontWeight: 700, color: C.red, background: C.red + "18", border: `1px solid ${C.red}44`, borderRadius: 10, padding: "1px 7px" }}>
+                      💰 尾款未收 ${Number(balance).toLocaleString()}
+                    </span>
+                  )}
+                  {isDone(o) && !isArchived(o) && o.wageUnconfirmedCount > 0 && (
+                    <span style={{ fontSize: 10, fontWeight: 700, color: C.gold, background: C.gold + "18", border: `1px solid ${C.gold}44`, borderRadius: 10, padding: "1px 7px" }}>
+                      🧾 {o.wageUnconfirmedCount} 筆工資未確認
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div style={{ textAlign: "right", marginLeft: 10, flexShrink: 0 }}>
+                {o.actualPrice ? (
+                  <div style={{ fontSize: 14, fontWeight: 700, color: C.gold, fontFamily: "Georgia,serif" }}>
+                    ${Number(o.actualPrice).toLocaleString()}
+                  </div>
+                ) : null}
+                <div style={{ fontSize: 11, fontWeight: 700, color: fc, marginTop: 3 }}>{isArchived(o) ? "🎉 完成取件" : (o.flow || o.status)}</div>
+                {stuckDays != null && <div style={{ marginTop: 4 }}><StuckBadge days={stuckDays} C={C} /></div>}
+              </div>
+            </div>
+            )}
+
+            {/* 展開詳情 */}
+            {isOpen && renderDetail(o)}
           </div>
         );
       })}
       </div>
+      )}
       </div>
       ))}
 
