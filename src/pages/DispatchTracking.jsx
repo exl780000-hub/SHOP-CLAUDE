@@ -1,17 +1,60 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { useTheme } from "../theme.jsx";
 import { useIsWide } from "../useIsWide.js";
 
 const TODAY = new Date().toISOString().slice(0, 10);
 
-// 流程 → 預期要建的派工單類型
-const FLOW_NEEDED = {
-  "📐 打版":    ["📐 打版單"],
-  "🪡 製作毛胚": ["🧵 毛胚製作單"],
-  "✂️ 開始製作": ["👔 外套製作單", "👖 褲子製作單"],
-  "🧍 第二試身": ["✂️ 外套修改單", "✂️ 褲子修改單"],
+// 流程 + 品項 → 這筆訂單實際需要的派工單（逐張檢查，部分派工也會顯示缺單）
+function neededTypes(order) {
+  const items = order.items || "";
+  const hasJacket  = items.includes("二件式") || items.includes("三件式") || items.includes("外套");
+  const hasTrouser = items.includes("二件式") || items.includes("三件式") || items.includes("褲子");
+  const hasVest    = items.includes("三件式") || items.includes("背心");
+  switch (order.flow) {
+    case "📐 打版":     return ["📐 打版單"];
+    case "🪡 製作毛胚": return ["🧵 毛胚製作單"];
+    case "✂️ 開始製作": return [
+      ...(hasJacket  ? ["👔 外套製作單"] : []),
+      ...(hasTrouser ? ["👖 褲子製作單"] : []),
+      ...(hasVest    ? ["🦺 背心製作單"] : []),
+    ];
+    case "🧍 第二試身": return [
+      ...(hasJacket  ? ["✂️ 外套修改單"] : []),
+      ...(hasTrouser ? ["✂️ 褲子修改單"] : []),
+    ];
+    default: return [];
+  }
+}
+
+// 各派工單類型的可指派師傅（第一個為預設）
+const TYPE_TAILORS = {
+  "📐 打版單":    ["經理"],
+  "🧵 毛胚製作單": ["駐店師傅", "經理"],
+  "👔 外套製作單": ["外套師傅"],
+  "👖 褲子製作單": ["褲子師傅"],
+  "🦺 背心製作單": ["外套師傅", "褲子師傅"],
+  "✂️ 外套修改單": ["外套師傅"],
+  "✂️ 褲子修改單": ["駐店師傅"],
 };
+
+const ALTER_ITEMS = {
+  "✂️ 外套修改單": ["肩領", "袖子", "腰身", "袖長單手", "袖長雙手"],
+  "✂️ 褲子修改單": ["腰身", "褲長", "褲腳", "褲管", "臀圍"],
+};
+
+// 依派工單類型組出內容文字（帶入訂單樣式）
+function buildDispatchContent(order, type, alterChecked = [], alterNote = "") {
+  if (type === "👔 外套製作單") return `外套樣式\n${order.jacketStyle || "—"}`;
+  if (type === "👖 褲子製作單") return `褲子樣式\n${order.trouserStyle || "—"}`;
+  if (type === "🦺 背心製作單") return `背心樣式\n${order.vestStyle || "—"}`;
+  if (type === "🧵 毛胚製作單") return `【樣式明細】\n外套：${order.jacketStyle || "—"}\n褲子：${order.trouserStyle || "—"}\n背心：${order.vestStyle || "—"}`;
+  if (type === "📐 打版單")    return `【完整製作資訊】\n外套：${order.jacketStyle || "—"}\n褲子：${order.trouserStyle || "—"}\n背心：${order.vestStyle || "—"}\n（量身尺寸請見訂單關聯量身記錄）`;
+  if (ALTER_ITEMS[type]) {
+    const lines = alterChecked.length > 0 ? alterChecked.map(k => `• ${k}`).join("\n") : "（未勾選項目）";
+    return `成品製作項目：\n${lines}${alterNote ? `\n特殊：${alterNote}` : ""}`;
+  }
+  return "";
+}
 
 const FLOW_COLOR = {
   "📐 打版":    "#4A7AB5",
@@ -45,7 +88,6 @@ function daysSince(dateStr) {
 export default function DispatchTracking() {
   const C = useTheme();
   const isWide = useIsWide();
-  const navigate = useNavigate();
   const [dispatches, setDispatches] = useState([]);
   const [orders, setOrders]         = useState([]);
   const [loading, setLoading]       = useState(true);
@@ -55,6 +97,62 @@ export default function DispatchTracking() {
   const [wage, setWage]             = useState("");
   const [saving, setSaving]         = useState(false);
   const [toast, setToast]           = useState(null);
+  const [doneMonth, setDoneMonth]   = useState(TODAY.slice(0, 7));
+  // 快速建單狀態
+  const [quickCreate, setQuickCreate] = useState(null); // { orderId, type }
+  const [qcTailor, setQcTailor]       = useState("");
+  const [qcDeadline, setQcDeadline]   = useState("");
+  const [qcChecked, setQcChecked]     = useState([]);
+  const [qcNote, setQcNote]           = useState("");
+  const [qcSaving, setQcSaving]       = useState(false);
+  // 改期限狀態
+  const [editDeadline, setEditDeadline] = useState(null); // dispatchId
+  const [newDeadline, setNewDeadline]   = useState("");
+
+  const openQuickCreate = (orderId, type) => {
+    setQuickCreate({ orderId, type });
+    setQcTailor((TYPE_TAILORS[type] || [])[0] || "");
+    setQcDeadline(""); setQcChecked([]); setQcNote("");
+  };
+
+  const submitQuickCreate = async (order) => {
+    if (!quickCreate || !qcTailor) return;
+    setQcSaving(true);
+    try {
+      const content = buildDispatchContent(order, quickCreate.type, qcChecked, qcNote);
+      const r = await fetch("/api/create-dispatch", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId: order.id, orderName: order.name,
+          dispatchType: quickCreate.type, tailor: qcTailor,
+          deadline: qcDeadline || undefined, content,
+        }),
+      });
+      const d = await r.json();
+      if (!d.success) throw new Error(d.error);
+      showToast(`✅ ${quickCreate.type} 已建立`);
+      setQuickCreate(null);
+      load();
+    } catch (e) { showToast("建立失敗：" + e.message, false); }
+    setQcSaving(false);
+  };
+
+  const saveDeadline = async (dispatchId) => {
+    if (!newDeadline) return;
+    setSaving(true);
+    try {
+      const r = await fetch("/api/update-dispatch", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dispatchId, deadline: newDeadline }),
+      });
+      const d = await r.json();
+      if (!d.success) throw new Error(d.error);
+      showToast("期限已更新");
+      setEditDeadline(null); setNewDeadline("");
+      load();
+    } catch (e) { showToast("更新失敗：" + e.message, false); }
+    setSaving(false);
+  };
 
   const load = async () => {
     setLoading(true);
@@ -83,21 +181,27 @@ export default function DispatchTracking() {
     if (oid) { if (!dispsByOrder[oid]) dispsByOrder[oid] = []; dispsByOrder[oid].push(d); }
   });
 
-  // ── 待派工：流程在 FLOW_NEEDED 且對應派工單未全部建立 ──
-  const needsDispatch = orders.filter(o => {
-    const needed = FLOW_NEEDED[o.flow];
-    if (!needed) return false;
-    const existing = dispsByOrder[o.id] || [];
-    // 只要有任何一種 needed type 的待完成/已完成派工都算已派工
-    const covered = needed.some(t => existing.some(d => d.type === t));
-    return !covered;
-  });
+  // ── 待派工：逐張比對，缺任何一張就列出（部分派工也會提醒）──
+  const needsDispatch = orders
+    .map(o => {
+      const needed = neededTypes(o);
+      if (needed.length === 0) return null;
+      const existing = dispsByOrder[o.id] || [];
+      const missing = needed.filter(t => !existing.some(d => d.type === t && d.status !== "❌ 取消"));
+      return missing.length > 0 ? { order: o, missing } : null;
+    })
+    .filter(Boolean);
 
-  // ── 待完成 ──
-  const pending = dispatches.filter(d => d.status === "⏳ 待完成");
+  // ── 待完成：逾期在前，其餘依期限近→遠 ──
+  const pending = dispatches.filter(d => d.status === "⏳ 待完成").sort((a, b) => {
+    const ao = isOverdue(a.deadline) ? 0 : 1, bo = isOverdue(b.deadline) ? 0 : 1;
+    if (ao !== bo) return ao - bo;
+    return (a.deadline || "9999").localeCompare(b.deadline || "9999");
+  });
 
   // ── 已完成 ──
   const done = dispatches.filter(d => d.status === "✅ 完成");
+  const doneInMonth = done.filter(d => ((d.returnDate || d.month || "")).startsWith(doneMonth));
 
   const overdueCount = pending.filter(d => isOverdue(d.deadline)).length;
 
@@ -182,41 +286,87 @@ export default function DispatchTracking() {
           {needsDispatch.length === 0 && (
             <div style={{ color: C.sage, textAlign: "center", padding: 40 }}>🎉 所有訂單都已派工</div>
           )}
-          {needsDispatch.map(o => {
-            const needed = FLOW_NEEDED[o.flow] || [];
+          {needsDispatch.map(({ order: o, missing }) => {
             const fc = FLOW_COLOR[o.flow] || C.sage;
             const stuck = daysSince(o.flowUpdatedAt);
+            const qcOpen = quickCreate?.orderId === o.id ? quickCreate.type : null;
             return (
               <div key={o.id} style={{
                 background: C.card, border: `1px solid ${C.border}`,
                 borderRadius: 14, marginBottom: 8, padding: "12px 14px", boxShadow: C.shadowCard,
               }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: C.ivory, marginBottom: 5,
-                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {o.name}
-                    </div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-                      <Tag color={fc}>{o.flow}</Tag>
-                      {o.items && <Tag color={C.sage}>{o.items}</Tag>}
-                      {stuck != null && stuck >= 3 && <Tag color={stuck >= 5 ? C.red : C.gold}>⏱ 已卡 {stuck} 天</Tag>}
-                    </div>
-                    <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 4 }}>
-                      <span style={{ fontSize: 10, color: C.sage }}>需建立：</span>
-                      {needed.map(t => (
-                        <span key={t} style={{
-                          fontSize: 10, padding: "2px 7px", borderRadius: 8,
-                          background: C.gold + "22", color: C.gold, border: `1px solid ${C.gold}44`,
-                        }}>{t}</span>
+                <div style={{ fontSize: 13, fontWeight: 700, color: C.ivory, marginBottom: 5,
+                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {o.name}
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 8 }}>
+                  <Tag color={fc}>{o.flow}</Tag>
+                  {o.items && <Tag color={C.sage}>{o.items}</Tag>}
+                  {stuck != null && stuck >= 3 && <Tag color={stuck >= 5 ? C.red : C.gold}>⏱ 已卡 {stuck} 天</Tag>}
+                </div>
+
+                {/* 缺的單：點了直接在卡片內建立 */}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {missing.map(t => (
+                    <button key={t} onClick={() => qcOpen === t ? setQuickCreate(null) : openQuickCreate(o.id, t)} style={{
+                      cursor: "pointer", fontSize: 12, fontWeight: 700, padding: "7px 12px", borderRadius: 8,
+                      background: qcOpen === t ? C.gold : C.gold + "22",
+                      color: qcOpen === t ? C.bg : C.gold,
+                      border: `1px solid ${C.gold}66`,
+                    }}>＋ {t}</button>
+                  ))}
+                </div>
+
+                {/* 卡內迷你建單表單 */}
+                {qcOpen && (
+                  <div style={{ marginTop: 10, background: C.mid, borderRadius: 10, padding: "12px 14px" }}>
+                    <div style={{ fontSize: 11, color: C.gold, fontWeight: 700, marginBottom: 8 }}>{qcOpen}</div>
+
+                    <div style={{ fontSize: 10, color: C.sage, marginBottom: 4 }}>指派師傅</div>
+                    <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
+                      {(TYPE_TAILORS[qcOpen] || []).map(t => (
+                        <button key={t} onClick={() => setQcTailor(t)} style={{
+                          cursor: "pointer", borderRadius: 6, fontSize: 12, fontWeight: 600, padding: "6px 12px",
+                          border: `1px solid ${qcTailor === t ? C.gold : C.border}`,
+                          background: qcTailor === t ? C.gold + "22" : C.card,
+                          color: qcTailor === t ? C.gold : C.sage,
+                        }}>{t}</button>
                       ))}
                     </div>
+
+                    {ALTER_ITEMS[qcOpen] && (
+                      <>
+                        <div style={{ fontSize: 10, color: C.sage, marginBottom: 4 }}>修改項目</div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+                          {ALTER_ITEMS[qcOpen].map(k => {
+                            const on = qcChecked.includes(k);
+                            return (
+                              <button key={k} onClick={() => setQcChecked(p => on ? p.filter(x => x !== k) : [...p, k])} style={{
+                                cursor: "pointer", borderRadius: 6, fontSize: 12, fontWeight: 600, padding: "6px 10px",
+                                border: `1px solid ${on ? C.gold : C.border}`,
+                                background: on ? C.gold + "22" : C.card, color: on ? C.gold : C.sage,
+                              }}>{on ? "☑ " : "☐ "}{k}</button>
+                            );
+                          })}
+                        </div>
+                        <input value={qcNote} onChange={e => setQcNote(e.target.value)} placeholder="特殊說明（選填）"
+                          style={{ width: "100%", boxSizing: "border-box", background: C.card, border: `1px solid ${C.border}`,
+                            borderRadius: 6, padding: "7px 10px", color: C.ivory, fontSize: 12, outline: "none", marginBottom: 10 }} />
+                      </>
+                    )}
+
+                    <div style={{ fontSize: 10, color: C.sage, marginBottom: 4 }}>完成期限（選填）</div>
+                    <input type="date" value={qcDeadline} onChange={e => setQcDeadline(e.target.value)}
+                      style={{ width: "100%", boxSizing: "border-box", background: C.card, border: `1px solid ${C.border}`,
+                        borderRadius: 6, padding: "7px 10px", color: C.ivory, fontSize: 13, outline: "none", marginBottom: 10 }} />
+
+                    <button onClick={() => submitQuickCreate(o)} disabled={qcSaving || !qcTailor} style={{
+                      width: "100%", padding: "10px", borderRadius: 8, border: "none",
+                      background: qcSaving ? C.border : C.gold, color: qcSaving ? C.sage : C.bg,
+                      fontSize: 13, fontWeight: 700, cursor: "pointer",
+                    }}>{qcSaving ? "建立中..." : `✦ 建立${qcOpen}`}</button>
                   </div>
-                  <button onClick={() => navigate("/dispatch")} style={{
-                    flexShrink: 0, background: C.gold, color: C.bg, border: "none",
-                    borderRadius: 8, padding: "8px 14px", fontWeight: 700, fontSize: 12, cursor: "pointer",
-                  }}>去派工 ↗</button>
-                </div>
+                )}
               </div>
             );
           })}
@@ -261,6 +411,8 @@ export default function DispatchTracking() {
                 {list.map(d => {
                   const overdue   = isOverdue(d.deadline);
                   const isEditing = editing === d.id;
+                  const isEditingDL = editDeadline === d.id;
+                  const daysLeft = d.deadline ? Math.ceil((new Date(d.deadline + "T00:00:00") - new Date(TODAY + "T00:00:00")) / 86400000) : null;
                   return (
                     <div key={d.id} style={{ borderBottom: `1px solid ${C.border}33` }}>
                       <div style={{
@@ -271,11 +423,13 @@ export default function DispatchTracking() {
                           <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                             <span style={{ fontSize: 13, fontWeight: 600 }}>{d.type}</span>
                             <span style={{ fontSize: 11, color: C.sage }}>{d.tailor}</span>
-                            {d.deadline && (
-                              <span style={{ fontSize: 10, color: overdue ? C.red : C.border }}>
-                                {overdue ? "⚠️ 逾期 " : "期限 "}{d.deadline}
-                              </span>
-                            )}
+                            <span onClick={() => { setEditDeadline(isEditingDL ? null : d.id); setNewDeadline(d.deadline || ""); }}
+                              style={{ fontSize: 10, cursor: "pointer", textDecoration: "underline dotted",
+                                color: overdue ? C.red : daysLeft != null && daysLeft <= 2 ? C.gold : C.border }}>
+                              {d.deadline
+                                ? (overdue ? `⚠️ 逾期 ${Math.abs(daysLeft)} 天（${d.deadline}）` : `剩 ${daysLeft} 天（${d.deadline}）`)
+                                : "＋設定期限"}
+                            </span>
                           </div>
                         </div>
                         <button onClick={() => {
@@ -288,6 +442,19 @@ export default function DispatchTracking() {
                           color: isEditing ? C.sage : C.gold, fontSize: 11, fontWeight: 700, cursor: "pointer",
                         }}>{isEditing ? "取消" : "完成"}</button>
                       </div>
+
+                      {/* 改期限 */}
+                      {isEditingDL && (
+                        <div style={{ padding: "0 14px 10px", display: "flex", gap: 8 }}>
+                          <input type="date" value={newDeadline} onChange={e => setNewDeadline(e.target.value)}
+                            style={{ flex: 1, background: C.card, border: `1px solid ${C.border}`, borderRadius: 6,
+                              padding: "7px 10px", color: C.ivory, fontSize: 13, outline: "none" }} />
+                          <button onClick={() => saveDeadline(d.id)} disabled={saving || !newDeadline} style={{
+                            background: C.gold, color: C.bg, border: "none", borderRadius: 6,
+                            padding: "7px 14px", fontSize: 12, fontWeight: 700, cursor: "pointer",
+                          }}>{saving ? "…" : "更新期限"}</button>
+                        </div>
+                      )}
 
                       {/* inline 完成表單 */}
                       {isEditing && (
@@ -318,13 +485,19 @@ export default function DispatchTracking() {
         </>
       )}
 
-      {/* ───── 已完成 ───── */}
+      {/* ───── 已完成（預設本月，可切月份）───── */}
       {!loading && tab === "已完成" && (
         <>
-          {done.length === 0 && (
-            <div style={{ color: C.sage, textAlign: "center", padding: 40 }}>尚無已完成派工單</div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            <input type="month" value={doneMonth} onChange={e => setDoneMonth(e.target.value)}
+              style={{ flex: 1, background: C.card, border: `1px solid ${C.border}`, borderRadius: 8,
+                padding: "8px 12px", color: C.ivory, fontSize: 13, outline: "none" }} />
+            <span style={{ fontSize: 11, color: C.sage, flexShrink: 0 }}>{doneInMonth.length} 筆</span>
+          </div>
+          {doneInMonth.length === 0 && (
+            <div style={{ color: C.sage, textAlign: "center", padding: 40 }}>{doneMonth} 無已完成派工單</div>
           )}
-          {done.map(d => {
+          {doneInMonth.map(d => {
             const oid   = d.orderRel?.[0];
             const order = orderById[oid];
             return (
@@ -351,7 +524,9 @@ export default function DispatchTracking() {
                       ${Number(d.wage).toLocaleString()}
                     </div>
                   ) : null}
-                  <div style={{ fontSize: 10, color: C.green, marginTop: 2 }}>✅ 完成</div>
+                  <div style={{ fontSize: 10, color: d.wageConfirmed ? C.green : C.gold, marginTop: 2 }}>
+                    {d.wageConfirmed ? "✅ 工資已確認" : "⚠️ 工資未確認"}
+                  </div>
                 </div>
               </div>
             );

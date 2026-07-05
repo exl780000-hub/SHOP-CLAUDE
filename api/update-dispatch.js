@@ -14,11 +14,12 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ success: false, error: "Method not allowed" });
 
   try {
-    const { dispatchId, status, returnDate, wage, wageConfirmed, month, orderId, dispatchType } = req.body;
+    const { dispatchId, status, returnDate, deadline, wage, wageConfirmed, month, orderId, dispatchType } = req.body;
 
     const props = {};
     if (status) props["狀態"] = prop.select(status);
     if (returnDate) props["送回日期"] = prop.date(returnDate);
+    if (deadline) props["完成期限"] = prop.date(deadline);
     if (wage != null && wage !== "") props["工資金額"] = prop.number(Number(wage));
     if (wageConfirmed != null) props["工資確認"] = prop.checkbox(wageConfirmed);
     if (month) props["結算月份"] = prop.text(month);

@@ -9,11 +9,11 @@ import QuickExpense from "./pages/QuickExpense.jsx";
 import Wages from "./pages/Wages.jsx";
 import { ThemeProvider, useTheme, useThemeControl, ACCENT_THEMES, BG_THEMES } from "./theme.jsx";
 
+// 派工管理(/dispatch)已整合進派工中心，路由保留但不放導航
 const PAGES = [
   { to: "/order",    label: "建立訂單", icon: "📋" },
   { to: "/orders",   label: "訂單查詢", icon: "🔍" },
-  { to: "/dispatch", label: "派工管理", icon: "✂️" },
-  { to: "/tracking", label: "派工追蹤", icon: "📊" },
+  { to: "/tracking", label: "派工中心", icon: "✂️" },
   { to: "/expense",  label: "快速記帳", icon: "💰" },
   { to: "/wages",    label: "工資計算", icon: "🧾" },
 ];
