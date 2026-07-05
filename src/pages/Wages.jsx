@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useTheme } from "../theme.jsx";
 import { useIsWide } from "../useIsWide.js";
 
@@ -480,6 +480,10 @@ export default function Wages() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dispatchedOrderIds, setDispatchedOrderIds] = useState(null);
+  const [viewPref, setViewPref] = useState(() => localStorage.getItem("gony-wages-view") || null);
+  const view = viewPref || (isWide ? "table" : "card"); // 寬螢幕預設表格
+  const setView = (v) => { setViewPref(v); localStorage.setItem("gony-wages-view", v); };
+  const [expandedId, setExpandedId] = useState(null);
 
   const [timeMode, setTimeMode] = useState("month");
   const [selectedMonth, setSelectedMonth] = useState(monthStr(0));
@@ -621,9 +625,13 @@ export default function Wages() {
 
       {/* 工資合計摘要 */}
       <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 16px", marginBottom: 14 }}>
-        <div style={{ fontSize: 11, color: C.gold, fontWeight: 700, marginBottom: 10 }}>
+        <div style={{ fontSize: 11, color: C.gold, fontWeight: 700, marginBottom: 10, display: "flex", alignItems: "center" }}>
           💰 工資合計
           <span style={{ marginLeft: 8, fontSize: 10, color: C.sage, fontWeight: 400 }}>{filtered.length} 筆</span>
+          <button onClick={() => setView(view === "table" ? "card" : "table")} style={{
+            marginLeft: "auto", cursor: "pointer", borderRadius: 8, fontSize: 11, fontWeight: 600, padding: "4px 10px",
+            border: `1px solid ${C.border}`, background: "transparent", color: C.sage,
+          }}>{view === "table" ? "🗂 卡片" : "📊 表格"}</button>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 8 }}>
           {[
@@ -652,6 +660,55 @@ export default function Wages() {
           <div style={{ fontSize: 12, fontWeight: 700, color: sec.color, marginBottom: 8, letterSpacing: "0.05em" }}>
             {sec.title}（{sec.list.length}）
           </div>
+
+          {/* 表格檢視：一行一筆，點行展開工資卡編輯 */}
+          {view === "table" ? (
+            <div style={{ overflowX: "auto", background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, boxShadow: C.shadowCard }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 760 }}>
+                <thead>
+                  <tr>
+                    {["訂單", "品項", "日期", "外套工資", "褲子工資", "經理費", "合計", "狀態"].map((h, i) => (
+                      <th key={h} style={{ textAlign: i >= 3 && i <= 6 ? "right" : "left", padding: "8px 12px", fontSize: 10,
+                        color: C.sage, fontWeight: 700, letterSpacing: "0.05em", borderBottom: `1px solid ${C.border}`,
+                        whiteSpace: "nowrap" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {sec.list.map(o => {
+                    const st = wageSyncStatus(o.id);
+                    const isOpen = expandedId === o.id;
+                    const tdBase = { padding: "9px 12px", fontSize: 12, borderBottom: `1px solid ${C.border}44`, whiteSpace: "nowrap" };
+                    const money = (v) => v ? `$${Number(v).toLocaleString()}` : "—";
+                    return (
+                      <React.Fragment key={o.id}>
+                        <tr onClick={() => setExpandedId(isOpen ? null : o.id)} style={{ cursor: "pointer",
+                          background: isOpen ? C.mid + "66" : "transparent", opacity: sec.key === "done" ? 0.8 : 1 }}>
+                          <td style={{ ...tdBase, fontWeight: 700, color: C.ivory, maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }}>{o.name}</td>
+                          <td style={{ ...tdBase, color: C.sage }}>{o.items || "—"}</td>
+                          <td style={{ ...tdBase, color: C.sage }}>{o.date || "—"}</td>
+                          <td style={{ ...tdBase, textAlign: "right", fontFamily: "Georgia,serif", color: C.ivory }}>{money(o.jacketWage)}</td>
+                          <td style={{ ...tdBase, textAlign: "right", fontFamily: "Georgia,serif", color: C.ivory }}>{money(o.trouserWage)}</td>
+                          <td style={{ ...tdBase, textAlign: "right", fontFamily: "Georgia,serif", color: C.ivory }}>{money(o.managerFee)}</td>
+                          <td style={{ ...tdBase, textAlign: "right", fontWeight: 700, fontFamily: "Georgia,serif", color: C.gold }}>{money(o.totalWage)}</td>
+                          <td style={{ ...tdBase }}>
+                            <span style={{ fontSize: 10, fontWeight: 700, color: st.color }}>{st.label}</span>
+                          </td>
+                        </tr>
+                        {isOpen && (
+                          <tr>
+                            <td colSpan={8} style={{ padding: "10px 12px", borderBottom: `1px solid ${C.border}`, background: C.mid + "33" }}>
+                              {renderCard(o)}
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
           <div style={isWide ? { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(400px, 1fr))", gap: 12, alignItems: "start" } : undefined}>
             {sec.list.map(o => {
               const st = wageSyncStatus(o.id);
@@ -666,6 +723,7 @@ export default function Wages() {
               );
             })}
           </div>
+          )}
         </div>
       ))}
 
