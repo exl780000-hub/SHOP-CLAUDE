@@ -758,7 +758,7 @@ function WageSettlement({ month }) {
   const C = useTheme();
   const [data, setData] = useState(null);
   const [loadingWS, setLoadingWS] = useState(false);
-  const [settling, setSettling] = useState(false);
+  const [settlingTailor, setSettlingTailor] = useState(null);
   const [result, setResult] = useState(null);
 
   const load = async () => {
@@ -771,18 +771,21 @@ function WageSettlement({ month }) {
     setLoadingWS(false);
   };
 
-  const settle = async () => {
-    if (!data?.byTailor?.length) return;
-    setSettling(true);
+  // 換月份時重置預覽
+  useEffect(() => { setData(null); setResult(null); }, [month]);
+
+  const settleOne = async (t) => {
+    setSettlingTailor(t.tailor); setResult(null);
     try {
       const r = await fetch("/api/wage-settlement", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ month, tailors: data.byTailor.map(t => ({ tailor: t.tailor, total: t.total })) }),
+        body: JSON.stringify({ month, tailor: t.tailor, total: t.total }),
       });
       const d = await r.json();
       setResult({ ok: d.success, msg: d.success ? d.message : d.error });
+      if (d.success) load(); // 重新載入，更新已結算狀態
     } catch (e) { setResult({ ok: false, msg: e.message }); }
-    setSettling(false);
+    setSettlingTailor(null);
   };
 
   if (!data && !loadingWS) {
@@ -793,9 +796,12 @@ function WageSettlement({ month }) {
     );
   }
 
+  const settled = new Set(data?.settledTailors || []);
+
   return (
     <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 14, padding: "14px 16px", boxShadow: C.shadowCard }}>
-      <div style={{ fontSize: 12, color: C.gold, fontWeight: 700, marginBottom: 12 }}>🧾 師傅工資月結（{month}）</div>
+      <div style={{ fontSize: 12, color: C.gold, fontWeight: 700, marginBottom: 4 }}>🧾 師傅工資月結（{month}）</div>
+      <div style={{ fontSize: 10, color: C.sage, marginBottom: 12 }}>各師傅分開結算，結清一位按一位</div>
       {loadingWS && <div style={{ color: C.sage, fontSize: 13 }}>載入中...</div>}
       {data && !loadingWS && (
         <>
@@ -803,37 +809,45 @@ function WageSettlement({ month }) {
             <div style={{ color: C.sage, fontSize: 13 }}>本月無已完成且確認工資的派工單</div>
           ) : (
             <>
-              {data.byTailor.map(t => (
-                <div key={t.tailor} style={{ marginBottom: 10 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: C.ivory }}>{t.tailor}</span>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: C.gold, fontFamily: "Georgia,serif" }}>${t.total.toLocaleString()}</span>
-                  </div>
-                  {t.items.map(item => (
-                    <div key={item.id} style={{ display: "flex", justifyContent: "space-between", padding: "3px 8px", borderLeft: `2px solid ${C.border}` }}>
-                      <span style={{ fontSize: 11, color: C.sage }}>{item.name}</span>
-                      <span style={{ fontSize: 11, color: C.ivory }}>${item.wage.toLocaleString()}</span>
+              {data.byTailor.map(t => {
+                const isSettled = settled.has(t.tailor);
+                return (
+                  <div key={t.tailor} style={{ marginBottom: 12, padding: "10px 12px", background: C.mid + "66", borderRadius: 10,
+                    border: `1px solid ${isSettled ? C.green + "44" : C.border}` }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: C.ivory }}>{t.tailor}</span>
+                      <span style={{ fontSize: 15, fontWeight: 700, color: C.gold, fontFamily: "Georgia,serif" }}>${t.total.toLocaleString()}</span>
                     </div>
-                  ))}
-                </div>
-              ))}
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderTop: `1px solid ${C.border}`, marginBottom: 10 }}>
+                    {t.items.map(item => (
+                      <div key={item.id} style={{ display: "flex", justifyContent: "space-between", padding: "3px 8px", borderLeft: `2px solid ${C.border}` }}>
+                        <span style={{ fontSize: 11, color: C.sage }}>{item.name}</span>
+                        <span style={{ fontSize: 11, color: C.ivory }}>${item.wage.toLocaleString()}</span>
+                      </div>
+                    ))}
+                    {isSettled ? (
+                      <div style={{ marginTop: 8, textAlign: "center", fontSize: 12, color: C.green, fontWeight: 700 }}>✅ 已結算</div>
+                    ) : (
+                      <button onClick={() => settleOne(t)} disabled={settlingTailor === t.tailor}
+                        style={{ width: "100%", marginTop: 8, padding: "9px", borderRadius: 8, border: "none",
+                          background: settlingTailor === t.tailor ? C.mid : C.green,
+                          color: settlingTailor === t.tailor ? C.sage : "#fff",
+                          fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+                        {settlingTailor === t.tailor ? "結算中..." : `結算 ${t.tailor} $${t.total.toLocaleString()}`}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "8px 0 0", borderTop: `1px solid ${C.border}` }}>
                 <span style={{ fontSize: 13, fontWeight: 700, color: C.ivory }}>工資合計</span>
                 <span style={{ fontSize: 16, fontWeight: 700, color: C.gold, fontFamily: "Georgia,serif" }}>${data.total.toLocaleString()}</span>
               </div>
               {result && (
-                <div style={{ marginBottom: 8, padding: "8px 12px", borderRadius: 8,
+                <div style={{ marginTop: 8, padding: "8px 12px", borderRadius: 8,
                   background: (result.ok ? C.green : C.red) + "22", fontSize: 12, fontWeight: 700,
                   color: result.ok ? C.green : C.red }}>
                   {result.ok ? "✅ " : "❌ "}{result.msg}
                 </div>
-              )}
-              {!result?.ok && (
-                <button onClick={settle} disabled={settling} style={{ width: "100%", padding: "10px",
-                  borderRadius: 8, border: "none", background: settling ? C.mid : C.green,
-                  color: settling ? C.sage : "#fff", fontSize: 13, fontWeight: 700, cursor: settling ? "default" : "pointer" }}>
-                  {settling ? "結算中..." : `確認結算 ${month}`}
-                </button>
               )}
             </>
           )}

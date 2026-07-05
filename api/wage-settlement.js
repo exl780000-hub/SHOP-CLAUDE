@@ -45,44 +45,58 @@ export default async function handler(req, res) {
       });
 
       const total = items.reduce((s, i) => s + i.wage, 0);
-      return res.status(200).json({ success: true, month, byTailor: Object.values(byTailor), total });
+
+      // 各師傅是否已結算過（財務總表已有「{月} {師傅} 工資」記錄）
+      const settledFinance = await queryDatabase(DB.finance, {
+        and: [
+          { property: "分類", select: { equals: "人事成本" } },
+          { property: "結算月份", rich_text: { equals: month } },
+        ],
+      });
+      const settledTailors = settledFinance.results
+        .map(p => p.properties["項目名稱"]?.title?.[0]?.plain_text || "")
+        .map(name => name.replace(`${month} `, "").replace(" 工資", ""))
+        .filter(Boolean);
+
+      return res.status(200).json({ success: true, month, byTailor: Object.values(byTailor), total, settledTailors });
     } catch (err) {
       return res.status(500).json({ success: false, error: err.message });
     }
   }
 
-  // POST: 確認結算，寫入財務總表
+  // POST: 單一師傅結算，寫入財務總表
   if (req.method === "POST") {
     try {
-      const { month, tailors } = req.body;
-      if (!month || !tailors?.length) return res.status(400).json({ success: false, error: "參數不足" });
+      const { month, tailor, total } = req.body;
+      if (!month || !tailor || total == null) return res.status(400).json({ success: false, error: "參數不足" });
 
-      // 檢查是否已結算
+      // 檢查該師傅本月是否已結算
       const existing = await queryDatabase(DB.finance, {
         and: [
           { property: "分類", select: { equals: "人事成本" } },
           { property: "結算月份", rich_text: { equals: month } },
         ],
       });
-      if (existing.results.length > 0) {
-        return res.status(200).json({ success: false, error: `${month} 工資已結算過` });
+      const dup = existing.results.some(p =>
+        (p.properties["項目名稱"]?.title?.[0]?.plain_text || "") === `${month} ${tailor} 工資`
+      );
+      if (dup) {
+        return res.status(200).json({ success: false, error: `${month} ${tailor} 已結算過` });
       }
 
       const today = new Date().toISOString().slice(0, 10);
-      await Promise.all(tailors.map(({ tailor, total }) =>
-        createPage(DB.finance, {
-          "項目名稱": prop.title(`${month} ${tailor} 工資`),
-          "類型": prop.select("💸 支出"),
-          "分類": prop.select("人事成本"),
-          "金額": prop.number(total),
-          "帳戶": prop.select("🏦 銀行"),
-          "付款狀態": prop.select("待收/待付"),
-          "日期": prop.date(today),
-          "結算月份": prop.text(month),
-        })
-      ));
+      await createPage(DB.finance, {
+        "項目名稱": prop.title(`${month} ${tailor} 工資`),
+        "類型": prop.select("💸 支出"),
+        "分類": prop.select("人事成本"),
+        "金額": prop.number(total),
+        "帳戶": prop.select("🏦 銀行"),
+        "付款狀態": prop.select("待收/待付"),
+        "日期": prop.date(today),
+        "結算月份": prop.text(month),
+      });
 
-      return res.status(200).json({ success: true, message: `${month} 工資結算完成，共 ${tailors.length} 筆` });
+      return res.status(200).json({ success: true, message: `${month} ${tailor} 工資 $${Number(total).toLocaleString()} 已結算` });
     } catch (err) {
       return res.status(500).json({ success: false, error: err.message });
     }
