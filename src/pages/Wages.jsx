@@ -566,12 +566,6 @@ export default function Wages() {
   const sumManager = filtered.reduce((s, o) => s + (o.managerFee  || 0), 0);
   const sumTotal   = filtered.reduce((s, o) => s + (o.totalWage   || 0), 0);
 
-  const quickMonths = [
-    { label: "上上月", val: monthStr(-2) },
-    { label: "上月",   val: monthStr(-1) },
-    { label: "本月",   val: monthStr(0)  },
-  ];
-
   const renderCard = (o) => {
     if (tailor === "外套師傅") return <JacketWageCard key={o.id} order={o} onSaved={handleSaved} />;
     if (tailor === "褲子師傅") return <TrouserWageCard key={o.id} order={o} onSaved={handleSaved} />;
@@ -586,23 +580,14 @@ export default function Wages() {
       <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: "14px 16px", marginBottom: 12 }}>
         <div style={{ fontSize: 11, color: C.gold, fontWeight: 700, marginBottom: 10 }}>📅 時間篩選</div>
         <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-          {quickMonths.map(({ label, val }) => {
-            const active = timeMode === "month" && selectedMonth === val;
-            return (
-              <button key={val} onClick={() => { setTimeMode("month"); setSelectedMonth(val); }} style={{
-                flex: 1, cursor: "pointer", borderRadius: 8, fontSize: 13, fontWeight: 600, padding: "8px 0",
-                border: `1px solid ${active ? C.gold : C.border}`,
-                background: active ? C.gold + "22" : C.mid,
-                color: active ? C.gold : C.sage,
-              }}>{label}<div style={{ fontSize: 10, marginTop: 2, color: active ? C.gold + "aa" : C.border }}>{val}</div></button>
-            );
-          })}
-          <button onClick={() => setTimeMode("custom")} style={{
-            flex: 1, cursor: "pointer", borderRadius: 8, fontSize: 13, fontWeight: 600, padding: "8px 0",
-            border: `1px solid ${timeMode === "custom" ? C.blue : C.border}`,
-            background: timeMode === "custom" ? C.blue + "22" : C.mid,
-            color: timeMode === "custom" ? C.blue : C.sage,
-          }}>自訂</button>
+          {[{ key: "month", label: "月份", color: C.gold }, { key: "custom", label: "自訂區間", color: C.blue }].map(({ key, label, color }) => (
+            <button key={key} onClick={() => setTimeMode(key)} style={{
+              flex: 1, cursor: "pointer", borderRadius: 8, fontSize: 13, fontWeight: 600, padding: "9px 0",
+              border: `1px solid ${timeMode === key ? color : C.border}`,
+              background: timeMode === key ? color + "22" : C.mid,
+              color: timeMode === key ? color : C.sage,
+            }}>{label}</button>
+          ))}
         </div>
         {timeMode === "month" && (
           <input type="month" value={selectedMonth} onChange={e => setSelectedMonth(e.target.value)}
@@ -658,20 +643,31 @@ export default function Wages() {
       {loading && <div style={{ color: C.sage, textAlign: "center", padding: 30 }}>載入中...</div>}
       {!loading && filtered.length === 0 && <div style={{ color: C.sage, textAlign: "center", padding: 40 }}>此區間無派工記錄</div>}
 
-      <div style={isWide ? { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(400px, 1fr))", gap: 12, alignItems: "start" } : undefined}>
-        {filtered.map(o => {
-          const st = wageSyncStatus(o.id);
-          return (
-            <div key={o.id}>
-              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 3 }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: st.color, background: st.color + "18",
-                  border: `1px solid ${st.color}44`, borderRadius: 10, padding: "1px 8px" }}>{st.label}</span>
-              </div>
-              {renderCard(o)}
-            </div>
-          );
-        })}
-      </div>
+      {/* 分區：待計算在上、已確認在下，一眼分清楚 */}
+      {[
+        { key: "pending", title: "⚠️ 待計算／未確認", color: C.gold,  list: filtered.filter(o => wageSyncStatus(o.id).key !== "ok") },
+        { key: "done",    title: "✅ 已確認可月結",   color: C.green, list: filtered.filter(o => wageSyncStatus(o.id).key === "ok") },
+      ].map(sec => sec.list.length === 0 ? null : (
+        <div key={sec.key} style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: sec.color, marginBottom: 8, letterSpacing: "0.05em" }}>
+            {sec.title}（{sec.list.length}）
+          </div>
+          <div style={isWide ? { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(400px, 1fr))", gap: 12, alignItems: "start" } : undefined}>
+            {sec.list.map(o => {
+              const st = wageSyncStatus(o.id);
+              return (
+                <div key={o.id} style={{ opacity: sec.key === "done" ? 0.8 : 1 }}>
+                  <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 3 }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: st.color, background: st.color + "18",
+                      border: `1px solid ${st.color}44`, borderRadius: 10, padding: "1px 8px" }}>{st.label}</span>
+                  </div>
+                  {renderCard(o)}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
 
       {/* 修改單／背心單工資（不在訂單工資欄位內，直接填在派工單上） */}
       <ExtraDispatchWages dispatches={dispatches} tailor={tailor} orders={orders} onSaved={loadDispatches} />
