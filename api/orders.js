@@ -51,12 +51,19 @@ export default async function handler(req, res) {
     if (req.query.phone != null) return await customerHistory(res, req.query.phone);
 
     const q = (req.query.q || "").trim();
-    // 一次抓齊：訂單 + 待收付財務記錄 + 派工單（算尾款/工資狀態，避免逐筆查詢）
-    const [data, pendingFinance, dispatchData] = await Promise.all([
+    // 一次抓齊：訂單 + 待收付財務記錄 + 派工單 + 客戶（電話搜尋用）
+    const [data, pendingFinance, dispatchData, customerData] = await Promise.all([
       queryDatabase(DB.order),
       queryDatabase(DB.finance, { property: "付款狀態", select: { equals: "待收/待付" } }),
       queryDatabase(DB.dispatch),
+      queryDatabase(DB.customer),
     ]);
+
+    // 客戶 id → 電話
+    const phoneById = {};
+    for (const p of customerData.results) {
+      phoneById[p.id] = p.properties["電話"]?.phone_number || "";
+    }
 
     // 有待收記錄的訂單 id 集合
     const pendingBalanceIds = new Set();
@@ -111,11 +118,12 @@ export default async function handler(req, res) {
         shirtStyle: getText("襯衫樣式"),
         balancePending: pendingBalanceIds.has(p.id),
         wageUnconfirmedCount: wageUnconfirmed[p.id] || 0,
+        customerPhone: phoneById[props["客戶"]?.relation?.[0]?.id] || "",
       };
     });
 
     const filtered = q
-      ? orders.filter(o => o.name.includes(q) || String(o.orderNo).includes(q))
+      ? orders.filter(o => o.name.includes(q) || String(o.orderNo).includes(q) || (o.customerPhone || "").includes(q))
       : orders;
 
     return res.status(200).json({ success: true, orders: filtered });

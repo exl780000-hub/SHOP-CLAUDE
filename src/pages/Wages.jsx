@@ -727,8 +727,18 @@ export default function Wages() {
         </div>
       ))}
 
-      {/* 修改單／背心單工資（不在訂單工資欄位內，直接填在派工單上） */}
-      <ExtraDispatchWages dispatches={dispatches} tailor={tailor} orders={orders} onSaved={loadDispatches} />
+      {/* 修改單／背心單工資（不在訂單工資欄位內，直接填在派工單上）
+          待完成的一律顯示（要填工資）；已完成的只顯示所選時間範圍內 */}
+      <ExtraDispatchWages dispatches={dispatches} tailor={tailor} orders={orders} onSaved={loadDispatches}
+        visible={dp => {
+          if (dp.status === "⏳ 待完成") return true;
+          const refDate = dp.returnDate || dp.month || "";
+          if (timeMode === "month") return refDate.startsWith(selectedMonth);
+          if (!customStart && !customEnd) return true;
+          if (customStart && refDate && refDate < customStart) return false;
+          if (customEnd && refDate && refDate.slice(0, 10) > customEnd) return false;
+          return !!refDate;
+        }} />
 
       {/* 師傅工資月結 */}
       <div style={{ marginTop: 18 }}>
@@ -746,14 +756,14 @@ const EXTRA_WAGE_HINT = {
   "✂️ 褲子修改單": "腰身250、褲長100、褲腳100、褲管150、臀圍200",
 };
 
-function ExtraDispatchWages({ dispatches, tailor, orders, onSaved }) {
+function ExtraDispatchWages({ dispatches, tailor, orders, onSaved, visible = () => true }) {
   const C = useTheme();
   const [editVals, setEditVals] = useState({});
   const [savingId, setSavingId] = useState(null);
 
   const orderName = (oid) => orders.find(o => o.id === oid)?.name || "";
   const list = dispatches.filter(dp =>
-    EXTRA_WAGE_TYPES.includes(dp.type) && (tailor === "全部" || dp.tailor === tailor)
+    EXTRA_WAGE_TYPES.includes(dp.type) && (tailor === "全部" || dp.tailor === tailor) && visible(dp)
   );
   if (list.length === 0) return null;
 

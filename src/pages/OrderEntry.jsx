@@ -579,11 +579,14 @@ export default function OrderEntry() {
   useEffect(() => {
     if (customer.phone.length < 8) { setCustomerHistory(null); return; }
     let cancelled = false;
-    fetch(`/api/orders?phone=${encodeURIComponent(customer.phone)}`)
-      .then(r => r.json())
-      .then(d => { if (!cancelled && d.success) setCustomerHistory(d.isReturning ? d : null); })
-      .catch(() => {});
-    return () => { cancelled = true; };
+    // 停止輸入 0.5 秒後才查詢，避免每打一個數字就打一次 API
+    const timer = setTimeout(() => {
+      fetch(`/api/orders?phone=${encodeURIComponent(customer.phone)}`)
+        .then(r => r.json())
+        .then(d => { if (!cancelled && d.success) setCustomerHistory(d.isReturning ? d : null); })
+        .catch(() => {});
+    }, 500);
+    return () => { cancelled = true; clearTimeout(timer); };
   }, [customer.phone]);
 
   const COMPANY_FEE_MAP = { "二件式":9800, "三件式":9800, "外套":7350, "褲子":2450, "背心":2450, "襯衫":0 };
@@ -630,6 +633,19 @@ export default function OrderEntry() {
       }
 
       setSubmitResult({ success: true, message: "訂單已成功建立！", url: data.orderUrl });
+
+      // 清空表單，避免下一筆訂單帶到舊資料或重複送出
+      setCustomer({ name: "", phone: "", gender: "", source: "" });
+      setCustomerHistory(null);
+      setCards([]);
+      setMeas(Object.fromEntries(ALL_MEAS.map(f => [f, ""])));
+      setShirtMeas(Object.fromEntries(MEAS_SHIRT[0].fields.map(f => [f, ""])));
+      setTraits({});
+      setMeasNote("");
+      setSizeNote("");
+      setStylePhotos([]);
+      setBodyPhotos([]);
+      setDeposit("");
 
     } catch (err) {
       setSubmitResult({ success: false, message: "建立失敗：" + err.message });

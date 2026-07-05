@@ -160,7 +160,7 @@ export default function Orders() {
 
   const kw = search.trim();
   const filtered = orders.filter(o => {
-    if (kw && !(o.name || "").includes(kw) && !String(o.orderNo || "").includes(kw)) return false;
+    if (kw && !(o.name || "").includes(kw) && !String(o.orderNo || "").includes(kw) && !(o.customerPhone || "").includes(kw)) return false;
     if (filter === "已完成" && o.flow !== "🎉 完成訂單") return false;
     if (filter === "進行中" && o.flow === "🎉 完成訂單") return false;
     if (stageFilter !== "全部" && o.flow !== stageFilter) return false;
@@ -364,7 +364,7 @@ export default function Orders() {
       {/* 搜尋（即時篩選） */}
       <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
         <input value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="🔍 輸入客戶名稱或訂單編號即時篩選"
+          placeholder="🔍 輸入姓名、電話或訂單編號即時篩選"
           style={{ flex: 1, background: C.card, border: `1px solid ${C.border}`, borderRadius: 10, padding: "10px 14px", color: C.ivory, fontSize: 14, outline: "none" }} />
         {search && (
           <button onClick={() => setSearch("")}
