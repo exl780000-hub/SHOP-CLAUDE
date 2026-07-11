@@ -58,7 +58,6 @@ export default function Orders() {
   const [loadingMeas, setLoadingMeas] = useState({});
   const [updatingFlow, setUpdatingFlow] = useState(null);
   const [collectingBalance, setCollectingBalance] = useState(null);
-  const [collectedIds, setCollectedIds] = useState(new Set());
   const [toast, setToast] = useState(null);
 
   const load = async (q = "") => {
@@ -123,7 +122,6 @@ export default function Orders() {
       });
       const d = await r.json();
       if (!d.success) throw new Error(d.error);
-      setCollectedIds(prev => new Set([...prev, orderId]));
       setOrders(prev => prev.map(o => o.id === orderId ? { ...o, balancePending: false } : o));
       showToast("✅ 尾款已標記為已收");
     } catch (e) {
@@ -181,7 +179,7 @@ export default function Orders() {
   // 展開詳情（卡片與表格檢視共用）
   const renderDetail = (o) => {
     const balance = (o.actualPrice || 0) - (o.deposit || 0);
-    const balanceOwed = o.balancePending || (balance > 0 && !collectedIds.has(o.id) && o.balancePending !== false);
+    const balanceOwed = !!o.balancePending;
     const meas = measurement[o.id];
     const measLoading = loadingMeas[o.id];
     return (
@@ -251,7 +249,7 @@ export default function Orders() {
                         <div style={{ fontSize: 15, fontWeight: 700, color: balance > 0 ? C.green : C.sage, fontFamily: "Georgia,serif" }}>${Number(balance).toLocaleString()}</div>
                       </div>
                     </div>
-                    {balance > 0 && !collectedIds.has(o.id) && (
+                    {balance > 0 && o.balancePending && (
                       <button onClick={() => collectBalance(o.id)} disabled={collectingBalance === o.id}
                         style={{ width: "100%", padding: "8px", borderRadius: 8, border: "none",
                           background: collectingBalance === o.id ? C.border : C.green,
@@ -259,7 +257,7 @@ export default function Orders() {
                         {collectingBalance === o.id ? "處理中..." : `💵 收尾款 $${Number(balance).toLocaleString()}`}
                       </button>
                     )}
-                    {collectedIds.has(o.id) && (
+                    {balance > 0 && !o.balancePending && (
                       <div style={{ textAlign: "center", fontSize: 12, color: C.green, fontWeight: 700 }}>✅ 尾款已收</div>
                     )}
                   </div>
@@ -479,7 +477,7 @@ export default function Orders() {
                 const fc = flowColor(o.flow);
                 const balance = (o.actualPrice || 0) - (o.deposit || 0);
                 const stuckDays = (!isDone(o) && !isArchived(o)) ? daysSince(o.flowUpdatedAt) : null;
-                const balanceOwed = o.balancePending || (balance > 0 && !collectedIds.has(o.id) && o.balancePending !== false);
+                const balanceOwed = !!o.balancePending;
                 const tdBase = { padding: "9px 12px", fontSize: 12, borderBottom: `1px solid ${C.border}44`, whiteSpace: "nowrap" };
                 return (
                   <React.Fragment key={o.id}>
@@ -532,7 +530,7 @@ export default function Orders() {
         const meas = measurement[o.id];
         const measLoading = loadingMeas[o.id];
         const stuckDays = (!isDone(o) && !isArchived(o)) ? daysSince(o.flowUpdatedAt) : null;
-        const balanceOwed = o.balancePending || (balance > 0 && !collectedIds.has(o.id) && o.balancePending !== false);
+        const balanceOwed = !!o.balancePending;
         const slimRow = sec.slim && !isOpen;
 
         return (

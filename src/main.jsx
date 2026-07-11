@@ -3,14 +3,12 @@ import ReactDOM from "react-dom/client";
 import { HashRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import OrderEntry from "./pages/OrderEntry.jsx";
 import Orders from "./pages/Orders.jsx";
-import Dispatch from "./pages/Dispatch.jsx";
 import DispatchTracking from "./pages/DispatchTracking.jsx";
 import QuickExpense from "./pages/QuickExpense.jsx";
 import Wages from "./pages/Wages.jsx";
 import WageCalc from "./pages/WageCalc.jsx";
 import { ThemeProvider, useTheme, useThemeControl, ACCENT_THEMES, BG_THEMES } from "./theme.jsx";
 
-// 派工管理(/dispatch)已整合進派工中心，路由保留但不放導航
 const PAGES = [
   { to: "/order",    label: "建立訂單", icon: "📋" },
   { to: "/orders",   label: "訂單查詢", icon: "🔍" },
@@ -271,7 +269,6 @@ function App() {
             <Route path="/" element={<Orders />} />
             <Route path="/order" element={<OrderEntry />} />
             <Route path="/orders" element={<Orders />} />
-            <Route path="/dispatch" element={<Dispatch />} />
             <Route path="/tracking" element={<DispatchTracking />} />
             <Route path="/expense" element={<QuickExpense />} />
             <Route path="/wages" element={<Wages />} />

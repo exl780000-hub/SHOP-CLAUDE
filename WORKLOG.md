@@ -30,8 +30,8 @@
 
 ## 系統現況（2026-07-11）
 
-- 導航 5 頁：建立訂單 / 訂單查詢 / 派工中心 / 快速記帳(含月報表) / 工資計算
-- 舊「派工管理」頁已從導航移除（路由 /dispatch 仍在，確認不用後可刪檔）
+- 導航 6 頁：建立訂單 / 訂單查詢 / 派工中心 / 快速記帳(含月報表) / 工資計算 / 工資試算
+- 舊「派工管理」頁已刪除（Dispatch.jsx、/dispatch 路由都移除）
 - 訂單查詢與工資計算支援 卡片/表格 雙檢視（寬螢幕預設表格，偏好記在 localStorage）
 - 定價：工本費＋布料＋布損(級距5%/3%、上限70%)×利潤率(8段)，進位百元；支援 HKD/EUR 即時匯率
 - 扣眼預設：前身(單排=扣數/雙排=3)＋袖扣×2；米蘭眼預設 1
@@ -42,7 +42,7 @@
 ## 待辦
 
 - [x] Claude Design 元件庫推送（已完成：9 張卡推到 claude.ai/design 專案「Design System」93fa6c3d-...，分 基礎/元件/版面 三組）
-- [ ] 清理項：刪舊 Dispatch.jsx、簡化 Orders 的 collectedIds/balancePending 雙狀態、Dashboard 內部 Sec 搬出
+- [x] 清理項：刪舊 Dispatch.jsx、簡化 Orders 的 collectedIds/balancePending 雙狀態、Dashboard 內部 Sec 搬出（2026-07-11 完成）
 - [ ] 月報表趨勢圖載入偏慢（6個月×2查詢），可改點開才載
 - [ ] 歷史訂單 30 天自動摺疊、客戶維度檢視（規劃過未做）
 - [ ] 行銷模組（未開始）
@@ -50,6 +50,10 @@
 ## 工作紀錄
 
 ### 2026-07-11
+- 程式碼優化清理（優化前備份：ZIP 已交付＋git tag `backup-pre-optimize-20260711`）：
+  刪除舊 Dispatch.jsx 頁面與 /dispatch 路由、刪除 gony/ 舊資料夾（早期重複副本）、
+  QuickExpense 的 Dashboard 內部 Sec/Row 元件搬到模組層級（防 iOS 鍵盤收合）、
+  OrderEntry 移除未使用的 NumIn、Orders 移除 collectedIds 前端暫存改用單一 balancePending 狀態
 - 建立本檔（WORKLOG.md）＋ CLAUDE.md 加入指引；完整原始檔 ZIP 備份交付店主
 - GONY 設計系統 9 張元件卡推上 Claude Design（色彩/字體/按鈕/卡片/輸入/標籤/表格/財務圖表/導航）
 - 新增「🧮 工資試算」獨立頁（/wage-calc）：五分頁（外套/褲子/經理/背心/修改），純前端手動勾選即時計算，不連訂單派工不寫資料，導航第 6 項

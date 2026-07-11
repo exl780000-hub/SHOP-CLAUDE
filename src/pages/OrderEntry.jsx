@@ -151,29 +151,6 @@ function Chip({label, active, onClick, color}) {
     }}>{label}</button>
   );
 }
-function NumIn({label, value, onChange, unit="in"}) {
-  const C = useTheme();
-  return (
-    <div style={{display:"flex", flexDirection:"column", gap:3}}>
-      <div style={{fontSize:10, color:C.sage, textAlign:"center"}}>{label}</div>
-      <div style={{display:"flex", alignItems:"center", gap:3}}>
-        <input type="number" value={value} onChange={e=>onChange(e.target.value)}
-          style={{width:"100%", background:C.mid, border:`1px solid ${C.border}`, borderRadius:6, padding:"6px 6px", color:C.ivory, fontSize:12, outline:"none", boxSizing:"border-box", textAlign:"center"}} />
-        <span style={{fontSize:9, color:C.sage, whiteSpace:"nowrap"}}>{unit}</span>
-      </div>
-    </div>
-  );
-}
-// 尺寸限制：最多 2 位整數 + 小數點後 1 位（例：99.9）
-function sanitizeSize(raw) {
-  let v = raw.replace(/[^0-9.]/g, "");
-  const firstDot = v.indexOf(".");
-  if (firstDot !== -1) v = v.slice(0, firstDot + 1) + v.slice(firstDot + 1).replace(/\./g, "");
-  const [intPart, decPart] = v.split(".");
-  let result = (intPart || "").slice(0, 2);
-  if (v.includes(".")) result += "." + (decPart || "").slice(0, 1);
-  return result;
-}
 function MeasCell({label, value, onChange}) {
   const C = useTheme();
   return (

@@ -100,19 +100,6 @@ function Dashboard() {
     if (d <= now) setMonth(monthStr(d));
   };
 
-  const Sec = ({ title, accent, children }) => (
-    <div style={{ background: C.card, border: `1px solid ${accent||C.border}`, borderRadius: 14, padding: "14px 16px", marginBottom: 14, boxShadow: C.shadowCard }}>
-      {title && <div style={{ fontSize: 12, color: accent||C.gold, fontWeight: 700, marginBottom: 12, letterSpacing:"0.05em" }}>{title}</div>}
-      {children}
-    </div>
-  );
-  const Row = ({ label, value, color, bold }) => (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "6px 0", borderBottom: `1px solid ${C.border}` }}>
-      <span style={{ fontSize: 12, color: bold ? C.ivory : C.sage, fontWeight: bold ? 700 : 400 }}>{label}</span>
-      <span style={{ fontSize: bold ? 16 : 13, fontWeight: bold ? 700 : 600, color: color || C.ivory, fontFamily: "Georgia,serif" }}>{value}</span>
-    </div>
-  );
-
   const s = summary;
   const netColor = !s ? C.sage : s.netProfit >= 0 ? C.green : C.red;
 
