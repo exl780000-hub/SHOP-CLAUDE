@@ -41,7 +41,7 @@
 
 ## 待辦
 
-- [ ] Claude Design 元件庫推送（進行中：scratchpad/gony-ds/ 已有 _theme.css/colors/typography/buttons/cards，尚缺 inputs/badges/table/progress 等，推到 claude.ai/design 專案「Design System」93fa6c3d-52a6-470f-b838-30331376e71b，空專案可直接寫）
+- [x] Claude Design 元件庫推送（已完成：9 張卡推到 claude.ai/design 專案「Design System」93fa6c3d-...，分 基礎/元件/版面 三組）
 - [ ] 清理項：刪舊 Dispatch.jsx、簡化 Orders 的 collectedIds/balancePending 雙狀態、Dashboard 內部 Sec 搬出
 - [ ] 月報表趨勢圖載入偏慢（6個月×2查詢），可改點開才載
 - [ ] 歷史訂單 30 天自動摺疊、客戶維度檢視（規劃過未做）
@@ -50,8 +50,8 @@
 ## 工作紀錄
 
 ### 2026-07-11
-- 建立本檔（WORKLOG.md）；完整原始檔 ZIP 備份交付店主
-- Claude Design 元件庫製作中（見待辦）
+- 建立本檔（WORKLOG.md）＋ CLAUDE.md 加入指引；完整原始檔 ZIP 備份交付店主
+- GONY 設計系統 9 張元件卡推上 Claude Design（色彩/字體/按鈕/卡片/輸入/標籤/表格/財務圖表/導航）
 
 ### 2026-07-06 ~ 07-10（本輪大改版摘要）
 - 訂單查詢：分層(需處理/進行中/歸檔)、收尾清單＋歸檔、尾款/工資標籤、即時搜尋(含電話)、Excel 表格檢視
