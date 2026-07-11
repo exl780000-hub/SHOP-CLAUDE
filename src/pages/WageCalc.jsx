@@ -2,10 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useTheme } from "../theme.jsx";
 import { useIsWide } from "../useIsWide.js";
 
-// 獨立工資試算：純手動輸入勾選，不連訂單/派工/Notion
-// 紀錄存在瀏覽器 localStorage（換裝置不共通）
-
-const STORE_KEY = "gony-wagecalc-records";
+// 獨立工資試算：不連訂單/派工，紀錄存於專用 Notion 資料庫（工資試算紀錄）
 
 const JACKET_BASE = 7000;
 const JACKET_ADDONS = [
@@ -30,10 +27,6 @@ const ALTER_ITEMS = [
   { key: "褲長", add: 100 }, { key: "褲腳", add: 100 }, { key: "褲管", add: 150 }, { key: "臀圍", add: 200 },
 ];
 const TABS = ["外套師傅", "褲子師傅", "經理", "背心", "修改"];
-
-function loadRecords() {
-  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || []; } catch { return []; }
-}
 
 function Sec({ title, children }) {
   const C = useTheme();
@@ -102,14 +95,22 @@ export default function WageCalc() {
   const isWide = useIsWide();
   const [tab, setTab] = useState("外套師傅");
   const [custName, setCustName] = useState("");
-  const [records, setRecords] = useState(loadRecords);
+  const [records, setRecords] = useState([]);
+  const [loadingRecs, setLoadingRecs] = useState(true);
+  const [busy, setBusy] = useState(false);
   const [checked, setChecked] = useState({});   // 未結算清單勾選
   const [showSettled, setShowSettled] = useState(false);
   const [toast, setToast] = useState(null);
 
-  useEffect(() => {
-    localStorage.setItem(STORE_KEY, JSON.stringify(records));
-  }, [records]);
+  const loadRecords = async () => {
+    try {
+      const r = await fetch("/api/wage-settlement?calc=1");
+      const d = await r.json();
+      if (d.success) setRecords(d.records || []);
+    } catch (e) { console.error(e); }
+    setLoadingRecs(false);
+  };
+  useEffect(() => { loadRecords(); }, []);
 
   const flash = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2200); };
 
@@ -170,22 +171,23 @@ export default function WageCalc() {
     if (tab === "修改") { setAlterQty({}); setAExtra(""); }
   };
 
-  const saveRecord = () => {
-    if (!custName.trim() || current.amount <= 0) return;
-    const rec = {
-      id: Date.now() + "-" + Math.random().toString(36).slice(2, 7),
-      name: custName.trim(),
-      type: tab,
-      detail: current.detail,
-      amount: current.amount,
-      date: new Date().toISOString().slice(0, 10),
-      settled: false,
-      settledAt: null,
-    };
-    setRecords(p => [rec, ...p]);
-    setCustName("");
-    resetCurrentTab();
-    flash(`💾 已存：${rec.name}・${rec.type} $${rec.amount.toLocaleString()}`);
+  const saveRecord = async () => {
+    if (!custName.trim() || current.amount <= 0 || busy) return;
+    setBusy(true);
+    const rec = { name: custName.trim(), type: tab, detail: current.detail, amount: current.amount, date: new Date().toISOString().slice(0, 10) };
+    try {
+      const r = await fetch("/api/wage-settlement", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "calc-add", ...rec }),
+      });
+      const d = await r.json();
+      if (!d.success) throw new Error(d.error);
+      setRecords(p => [{ id: d.id, ...rec, settled: false, settledAt: null }, ...p]);
+      setCustName("");
+      resetCurrentTab();
+      flash(`💾 已存：${rec.name}・${rec.type} $${rec.amount.toLocaleString()}`);
+    } catch (e) { flash("❌ 儲存失敗：" + e.message); }
+    setBusy(false);
   };
 
   const pending = records.filter(r => !r.settled);
@@ -194,16 +196,54 @@ export default function WageCalc() {
   const checkedSum = checkedIds.reduce((s, r) => s + r.amount, 0);
   const settledSum = settled.reduce((s, r) => s + r.amount, 0);
 
-  const settleChecked = () => {
-    if (checkedIds.length === 0) return;
-    const today = new Date().toISOString().slice(0, 10);
-    setRecords(p => p.map(r => checked[r.id] ? { ...r, settled: true, settledAt: today } : r));
-    setChecked({});
-    flash(`✅ 已結算 ${checkedIds.length} 筆，共 $${checkedSum.toLocaleString()}`);
+  const settleChecked = async () => {
+    if (checkedIds.length === 0 || busy) return;
+    setBusy(true);
+    const ids = checkedIds.map(r => r.id);
+    try {
+      const r = await fetch("/api/wage-settlement", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "calc-settle", ids, settled: true }),
+      });
+      const d = await r.json();
+      if (!d.success) throw new Error(d.error);
+      const today = new Date().toISOString().slice(0, 10);
+      setRecords(p => p.map(rc => checked[rc.id] ? { ...rc, settled: true, settledAt: today } : rc));
+      setChecked({});
+      flash(`✅ 已結算 ${ids.length} 筆，共 $${checkedSum.toLocaleString()}`);
+    } catch (e) { flash("❌ 結算失敗：" + e.message); }
+    setBusy(false);
   };
 
-  const removeRecord = (id) => setRecords(p => p.filter(r => r.id !== id));
-  const unsettle = (id) => setRecords(p => p.map(r => r.id === id ? { ...r, settled: false, settledAt: null } : r));
+  const removeRecord = async (id) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const r = await fetch("/api/wage-settlement", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "calc-delete", id }),
+      });
+      const d = await r.json();
+      if (!d.success) throw new Error(d.error);
+      setRecords(p => p.filter(rc => rc.id !== id));
+    } catch (e) { flash("❌ 刪除失敗：" + e.message); }
+    setBusy(false);
+  };
+
+  const unsettle = async (id) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const r = await fetch("/api/wage-settlement", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "calc-settle", ids: [id], settled: false }),
+      });
+      const d = await r.json();
+      if (!d.success) throw new Error(d.error);
+      setRecords(p => p.map(rc => rc.id === id ? { ...rc, settled: false, settledAt: null } : rc));
+    } catch (e) { flash("❌ 退回失敗：" + e.message); }
+    setBusy(false);
+  };
 
   const chip = (on) => ({
     cursor: "pointer", borderRadius: 8, fontSize: 13, fontWeight: 600, padding: "9px 4px", flex: 1,
@@ -248,7 +288,7 @@ export default function WageCalc() {
   return (
     <div style={{ maxWidth: isWide ? 640 : 520, margin: "0 auto", padding: "14px 14px 80px" }}>
       <div style={{ fontSize: 11, color: C.sage, marginBottom: 10 }}>
-        🧮 獨立試算工具：勾選計算 → 輸入客戶存成一筆 → 勾選多筆結算總額。紀錄存於此裝置瀏覽器。
+        🧮 獨立試算工具：勾選計算 → 輸入客戶存成一筆 → 勾選多筆結算總額。紀錄存於 Notion「工資試算紀錄」，跨裝置共用。
       </div>
 
       {/* 類型切換 */}
@@ -341,6 +381,8 @@ export default function WageCalc() {
 
       {/* 合計 + 存成一筆 */}
       <SaveBar amount={current.amount} note={tab === "經理" ? mItem : ""} name={custName} onName={setCustName} onSave={saveRecord} />
+
+      {loadingRecs && <div style={{ color: C.sage, fontSize: 12, textAlign: "center", padding: 16 }}>紀錄載入中...</div>}
 
       {/* 未結算清單 */}
       {pending.length > 0 && (

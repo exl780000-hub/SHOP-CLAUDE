@@ -8,6 +8,7 @@ export const DB = {
   measurement: "1bfae58f-449d-47fb-a808-3f316e266ebf",
   dispatch: "e6dbceba-5e2a-4bb0-97d8-623622f515fb",
   finance: "06c95176-c04c-4a2d-9428-4080d5bd5317",
+  wageCalc: "12cc4105-77c2-48f6-b702-443910366a66", // 工資試算紀錄（獨立，不連訂單）
 };
 
 async function notionFetch(path, options = {}) {
@@ -59,6 +60,13 @@ export async function createPage(databaseId, properties) {
 
 export async function getPage(pageId) {
   return notionFetch(`pages/${pageId}`, { method: "GET" });
+}
+
+export async function archivePage(pageId) {
+  return notionFetch(`pages/${pageId}`, {
+    method: "PATCH",
+    body: JSON.stringify({ archived: true }),
+  });
 }
 
 export async function updatePage(pageId, properties) {

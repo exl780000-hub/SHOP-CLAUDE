@@ -1,8 +1,73 @@
-import { DB, queryDatabase, createPage, prop, cors, monthStr } from "./_notion.js";
+import { DB, queryDatabase, createPage, updatePage, archivePage, prop, cors, monthStr } from "./_notion.js";
 
 export default async function handler(req, res) {
   cors(res);
   if (req.method === "OPTIONS") return res.status(200).end();
+
+  // ── 工資試算紀錄（獨立資料庫，?calc=1 / action:"calc-*"）────────────────
+  if (req.method === "GET" && req.query.calc) {
+    try {
+      const data = await queryDatabase(DB.wageCalc);
+      const records = data.results.map(p => {
+        const props = p.properties;
+        return {
+          id: p.id,
+          name: props["名稱"]?.title?.[0]?.plain_text || "",
+          type: props["類型"]?.select?.name || "",
+          detail: props["明細"]?.rich_text?.map(t => t.plain_text).join("") || "",
+          amount: props["金額"]?.number || 0,
+          date: props["日期"]?.date?.start || "",
+          settled: (props["狀態"]?.select?.name || "") === "已結算",
+          settledAt: props["結算日期"]?.date?.start || null,
+        };
+      }).sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+      return res.status(200).json({ success: true, records });
+    } catch (err) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
+  if (req.method === "POST" && String(req.body?.action || "").startsWith("calc-")) {
+    try {
+      const { action } = req.body;
+
+      if (action === "calc-add") {
+        const { name, type, detail, amount, date } = req.body;
+        if (!name || amount == null) return res.status(400).json({ success: false, error: "參數不足" });
+        const page = await createPage(DB.wageCalc, {
+          "名稱": prop.title(name),
+          "類型": prop.select(type),
+          "明細": prop.text(detail || ""),
+          "金額": prop.number(Number(amount)),
+          "日期": prop.date(date || new Date().toISOString().slice(0, 10)),
+          "狀態": prop.select("未結算"),
+        });
+        return res.status(200).json({ success: true, id: page.id });
+      }
+
+      if (action === "calc-settle") {
+        const { ids, settled } = req.body;
+        if (!ids?.length) return res.status(400).json({ success: false, error: "未指定紀錄" });
+        const today = new Date().toISOString().slice(0, 10);
+        await Promise.all(ids.map(id => updatePage(id, {
+          "狀態": prop.select(settled ? "已結算" : "未結算"),
+          "結算日期": settled ? prop.date(today) : prop.date(null),
+        })));
+        return res.status(200).json({ success: true, count: ids.length });
+      }
+
+      if (action === "calc-delete") {
+        const { id } = req.body;
+        if (!id) return res.status(400).json({ success: false, error: "未指定紀錄" });
+        await archivePage(id);
+        return res.status(200).json({ success: true });
+      }
+
+      return res.status(400).json({ success: false, error: "未知 action" });
+    } catch (err) {
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
 
   // GET: 預覽本月工資明細
   if (req.method === "GET") {
