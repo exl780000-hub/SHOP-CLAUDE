@@ -7,6 +7,7 @@ import Dispatch from "./pages/Dispatch.jsx";
 import DispatchTracking from "./pages/DispatchTracking.jsx";
 import QuickExpense from "./pages/QuickExpense.jsx";
 import Wages from "./pages/Wages.jsx";
+import WageCalc from "./pages/WageCalc.jsx";
 import { ThemeProvider, useTheme, useThemeControl, ACCENT_THEMES, BG_THEMES } from "./theme.jsx";
 
 // 派工管理(/dispatch)已整合進派工中心，路由保留但不放導航
@@ -16,6 +17,7 @@ const PAGES = [
   { to: "/tracking", label: "派工中心", icon: "✂️" },
   { to: "/expense",  label: "快速記帳", icon: "💰" },
   { to: "/wages",    label: "工資計算", icon: "🧾" },
+  { to: "/wage-calc", label: "工資試算", icon: "🧮" },
 ];
 
 const SIDEBAR_W   = 64;
@@ -273,6 +275,7 @@ function App() {
             <Route path="/tracking" element={<DispatchTracking />} />
             <Route path="/expense" element={<QuickExpense />} />
             <Route path="/wages" element={<Wages />} />
+            <Route path="/wage-calc" element={<WageCalc />} />
           </Routes>
         </Layout>
       </ThemeProvider>
