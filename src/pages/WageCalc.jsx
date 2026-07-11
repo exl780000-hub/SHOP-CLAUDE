@@ -24,10 +24,10 @@ const JACKET_ADDONS = [
 const TROUSER_BASE = 1900;
 const MANAGER_FEE = { "二件式": 2000, "三件式": 2400, "外套": 1600, "褲子": 400, "背心": 400, "襯衫": 200 };
 const PATTERN_FEE = { "二件式": 4500, "三件式": 5800, "外套": 3200, "褲子": 1300, "背心": 1300, "襯衫": 0 };
+// 外套師傅修改項目（僅外套類）
 const ALTER_ITEMS = [
   { key: "肩領", add: 300 }, { key: "袖子", add: 200 }, { key: "腰身", add: 250 },
   { key: "袖長單手", add: 80 }, { key: "袖長雙手", add: 160 },
-  { key: "褲長", add: 100 }, { key: "褲腳", add: 100 }, { key: "褲管", add: 150 }, { key: "臀圍", add: 200 },
 ];
 
 function Sec({ title, children }) {
@@ -213,6 +213,14 @@ export default function WageCalc() {
   const checkedIds = pending.filter(r => checked[r.id]);
   const checkedSum = checkedIds.reduce((s, r) => s + r.amount, 0);
   const settledSum = settled.reduce((s, r) => s + r.amount, 0);
+
+  const allChecked = pending.length > 0 && pending.every(r => checked[r.id]);
+  const toggleAll = () => {
+    if (allChecked) { setChecked({}); return; }
+    const next = {};
+    pending.forEach(r => { next[r.id] = true; });
+    setChecked(next);
+  };
 
   const settleChecked = async () => {
     if (checkedIds.length === 0 || busy) return;
@@ -428,6 +436,11 @@ export default function WageCalc() {
       {pending.length > 0 && (
         <div style={{ marginTop: 18 }}>
           <Sec title={`📋 ${tailor}・未結算（${pending.length} 筆）`}>
+            <button onClick={toggleAll} style={{
+              marginBottom: 6, cursor: "pointer", borderRadius: 8, fontSize: 12, fontWeight: 700, padding: "7px 14px",
+              border: `1px solid ${allChecked ? C.gold : C.border}`,
+              background: allChecked ? C.gold + "22" : C.mid, color: allChecked ? C.gold : C.sage,
+            }}>{allChecked ? "☑ 取消全選" : "☐ 全部勾選"}</button>
             {pending.map(r => <RecRow key={r.id} r={r} mode="pending" />)}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 10 }}>
               <span style={{ fontSize: 12, color: C.sage }}>已勾選 {checkedIds.length} 筆</span>
