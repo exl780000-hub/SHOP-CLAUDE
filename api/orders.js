@@ -1,4 +1,4 @@
-import { DB, queryDatabase, cors } from "./_notion.js";
+import { DB, queryDatabase, cors, requireAuth, makeToken } from "./_notion.js";
 
 // 依電話查詢客戶是否為回頭客（合併自 customer-history.js，節省 Vercel serverless function 額度）
 async function customerHistory(res, phone) {
@@ -46,6 +46,19 @@ async function customerHistory(res, phone) {
 export default async function handler(req, res) {
   cors(res);
   if (req.method === "OPTIONS") return res.status(200).end();
+
+  // 登入（不需權杖）：POST { action:"login", password }
+  if (req.method === "POST" && req.body?.action === "login") {
+    if (!process.env.APP_PASSWORD) {
+      return res.status(200).json({ success: true, token: "", authDisabled: true });
+    }
+    if (req.body.password === process.env.APP_PASSWORD) {
+      return res.status(200).json({ success: true, token: makeToken() });
+    }
+    return res.status(401).json({ success: false, error: "密碼錯誤" });
+  }
+
+  if (!requireAuth(req, res)) return;
 
   try {
     if (req.query.phone != null) return await customerHistory(res, req.query.phone);

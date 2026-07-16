@@ -94,7 +94,43 @@ export const prop = {
 export function cors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, X-Auth-Token");
+}
+
+// ── 登入驗證（環境變數 APP_PASSWORD 未設定時 = 不啟用登入）────────────────
+import { createHmac, timingSafeEqual } from "crypto";
+
+function authSecret() {
+  // 密碼＋Notion token 混合當簽章金鑰，改密碼即讓所有舊權杖失效
+  return `${process.env.APP_PASSWORD || ""}::${NOTION_TOKEN || ""}`;
+}
+
+function sign(exp) {
+  return createHmac("sha256", authSecret()).update(String(exp)).digest("hex");
+}
+
+// 產生權杖（預設 30 天有效）
+export function makeToken(days = 30) {
+  const exp = Date.now() + days * 86400000;
+  return `${exp}.${sign(exp)}`;
+}
+
+export function verifyToken(token) {
+  const [expStr, sig] = String(token || "").split(".");
+  const exp = Number(expStr);
+  if (!exp || !sig || Date.now() > exp) return false;
+  const expected = sign(exp);
+  if (sig.length !== expected.length) return false;
+  return timingSafeEqual(Buffer.from(sig), Buffer.from(expected));
+}
+
+// 每支 API 開頭呼叫：通過回 true；失敗回 401 並回 false
+export function requireAuth(req, res) {
+  if (!process.env.APP_PASSWORD) return true; // 未設密碼 → 不啟用登入
+  const token = req.headers["x-auth-token"];
+  if (verifyToken(token)) return true;
+  res.status(401).json({ success: false, error: "未登入或登入已過期", authRequired: true });
+  return false;
 }
 
 export function monthStr(d = new Date()) {

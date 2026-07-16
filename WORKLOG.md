@@ -28,7 +28,12 @@
 7. **工資單一資料源**：update-order 存訂單工資時會自動同步派工單（工資金額＋工資確認）；月結、收尾清單都讀派工單。不要另寫第二套。
 8. **Notion 欄位名**以資料庫實際 schema 為準（例：前端「領圍」→ Notion「頸圍」，對照表在 create-order.js 的 MEAS_MAP）。
 
-## 系統現況（2026-07-11）
+## 系統現況（2026-07-16）
+
+- 登入管理：環境變數 `APP_PASSWORD` 設定密碼即啟用（未設定＝不用登入）。
+  前端登入頁發權杖（30 天，存 localStorage），所有 /api/ 自動帶 X-Auth-Token，
+  11 支 API 都有 requireAuth 檢查；改密碼即讓所有已發權杖失效；右上角可登出。
+  **店主需到 Vercel → Settings → Environment Variables 新增 APP_PASSWORD 後 Redeploy 才生效。**
 
 - 導航 6 頁：建立訂單 / 訂單查詢 / 派工中心 / 快速記帳(含月報表) / 工資計算 / 工資試算
 - 舊「派工管理」頁已刪除（Dispatch.jsx、/dispatch 路由都移除）
@@ -48,6 +53,11 @@
 - [ ] 行銷模組（未開始）
 
 ## 工作紀錄
+
+### 2026-07-16
+- 新增登入管理：單一密碼（APP_PASSWORD）＋HMAC 權杖 30 天；登入端點併入 orders API
+  （POST action:"login"，不佔新 function 額度）；全 API requireAuth；前端 fetch 攔截器
+  自動帶權杖、401 自動跳登入頁；TopBar 登出按鈕；未設 APP_PASSWORD 時系統照舊免登入
 
 ### 2026-07-11
 - 程式碼優化清理（優化前備份：ZIP 已交付＋git tag `backup-pre-optimize-20260711`）：

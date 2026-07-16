@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import { HashRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import OrderEntry from "./pages/OrderEntry.jsx";
@@ -20,6 +20,116 @@ const PAGES = [
 
 const SIDEBAR_W   = 64;
 const SIDEBAR_EXP = 200;
+
+// ── 登入管理 ────────────────────────────────────────────────────────
+// 所有 /api/ 請求自動帶上權杖；收到 401 時清除權杖並跳回登入頁
+const TOKEN_KEY = "gony_token";
+const _origFetch = window.fetch.bind(window);
+window.fetch = async (url, opts = {}) => {
+  const isApi = typeof url === "string" && url.startsWith("/api/");
+  if (isApi) {
+    const t = localStorage.getItem(TOKEN_KEY);
+    if (t) opts = { ...opts, headers: { ...(opts.headers || {}), "X-Auth-Token": t } };
+  }
+  const r = await _origFetch(url, opts);
+  if (isApi && r.status === 401) {
+    const d = await r.clone().json().catch(() => ({}));
+    if (d.authRequired) {
+      localStorage.removeItem(TOKEN_KEY);
+      window.dispatchEvent(new Event("gony-auth-expired"));
+    }
+  }
+  return r;
+};
+
+function LoginScreen({ onLogin }) {
+  const C = useTheme();
+  const [pw, setPw] = useState("");
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setBusy(true); setErr("");
+    try {
+      const r = await _origFetch("/api/orders", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "login", password: pw }),
+      });
+      const d = await r.json();
+      if (d.success) {
+        if (d.token) localStorage.setItem(TOKEN_KEY, d.token);
+        onLogin();
+      } else {
+        setErr(d.error || "登入失敗");
+      }
+    } catch {
+      setErr("連線失敗，請再試一次");
+    }
+    setBusy(false);
+  };
+
+  return (
+    <div style={{
+      minHeight: "100vh", background: C.bg, display: "flex",
+      alignItems: "center", justifyContent: "center", padding: 20,
+    }}>
+      <form onSubmit={submit} style={{
+        width: "100%", maxWidth: 340, background: C.card,
+        border: `1px solid ${C.border}`, borderRadius: 16, padding: "36px 28px",
+        boxShadow: C.shadowPop, textAlign: "center",
+      }}>
+        <div style={{ fontSize: 34, color: C.gold, fontFamily: "Georgia,serif", marginBottom: 6 }}>✦</div>
+        <div style={{ fontSize: 22, fontWeight: 700, color: C.gold, fontFamily: "Georgia,serif", letterSpacing: "0.08em" }}>GONY</div>
+        <div style={{ fontSize: 12, color: C.sage, marginBottom: 28 }}>西裝店管理系統</div>
+        <input
+          type="password" value={pw} onChange={e => setPw(e.target.value)}
+          placeholder="請輸入密碼" autoFocus
+          style={{
+            width: "100%", padding: "12px 14px", borderRadius: 10, fontSize: 16,
+            background: C.bg, border: `1px solid ${err ? C.red || "#c0392b" : C.border}`,
+            color: C.ivory, outline: "none", marginBottom: 12, boxSizing: "border-box",
+          }}
+        />
+        {err && <div style={{ fontSize: 12, color: C.red || "#e74c3c", marginBottom: 10 }}>{err}</div>}
+        <button type="submit" disabled={busy} style={{
+          width: "100%", padding: "12px", borderRadius: 10, border: "none",
+          background: busy ? C.border : C.gold, color: "#1a1a1a",
+          fontSize: 15, fontWeight: 700, cursor: "pointer",
+        }}>
+          {busy ? "登入中..." : "登入"}
+        </button>
+      </form>
+    </div>
+  );
+}
+
+function AuthGate({ children }) {
+  // checking：開站確認是否需要登入；login：顯示登入頁；ok：進入系統
+  const [state, setState] = useState(localStorage.getItem(TOKEN_KEY) ? "ok" : "checking");
+
+  useEffect(() => {
+    const onExpired = () => setState("login");
+    window.addEventListener("gony-auth-expired", onExpired);
+    return () => window.removeEventListener("gony-auth-expired", onExpired);
+  }, []);
+
+  useEffect(() => {
+    if (state !== "checking") return;
+    // 沒有權杖：探測伺服器是否有設密碼（沒設就直接進入）
+    _origFetch("/api/orders", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "login", password: "" }),
+    })
+      .then(r => r.json())
+      .then(d => setState(d.success && d.authDisabled ? "ok" : "login"))
+      .catch(() => setState("login"));
+  }, [state]);
+
+  if (state === "checking") return null;
+  if (state === "login") return <LoginScreen onLogin={() => setState("ok")} />;
+  return children;
+}
 
 // ── 展開側邊欄的完整選色器 ──────────────────────────────────────────
 function ThemePicker() {
@@ -244,6 +354,23 @@ function TopBar({ onMenuToggle }) {
       {!current && (
         <span style={{ fontSize: 15, fontWeight: 700, color: C.gold, fontFamily: "Georgia,serif" }}>GONY 西裝店</span>
       )}
+      {localStorage.getItem(TOKEN_KEY) && (
+        <button
+          onClick={() => {
+            if (window.confirm("確定要登出嗎？")) {
+              localStorage.removeItem(TOKEN_KEY);
+              window.location.reload();
+            }
+          }}
+          title="登出"
+          style={{
+            marginLeft: "auto", background: "transparent", border: `1px solid ${C.border}`,
+            borderRadius: 8, cursor: "pointer", color: C.sage, fontSize: 12,
+            padding: "5px 10px", fontWeight: 700,
+          }}>
+          登出
+        </button>
+      )}
     </div>
   );
 }
@@ -264,6 +391,7 @@ function App() {
   return (
     <HashRouter>
       <ThemeProvider>
+        <AuthGate>
         <Layout>
           <Routes>
             <Route path="/" element={<Orders />} />
@@ -275,6 +403,7 @@ function App() {
             <Route path="/wage-calc" element={<WageCalc />} />
           </Routes>
         </Layout>
+        </AuthGate>
       </ThemeProvider>
     </HashRouter>
   );

@@ -1,8 +1,9 @@
-import { DB, queryDatabase, createPage, updatePage, archivePage, prop, cors, monthStr } from "./_notion.js";
+import { DB, queryDatabase, createPage, updatePage, archivePage, prop, cors, requireAuth, monthStr } from "./_notion.js";
 
 export default async function handler(req, res) {
   cors(res);
   if (req.method === "OPTIONS") return res.status(200).end();
+  if (!requireAuth(req, res)) return;
 
   // ── 工資試算紀錄（獨立資料庫，?calc=1 / action:"calc-*"）────────────────
   if (req.method === "GET" && req.query.calc) {

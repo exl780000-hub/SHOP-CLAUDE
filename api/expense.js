@@ -1,4 +1,4 @@
-import { DB, createPage, queryDatabase, prop, cors, monthStr } from "./_notion.js";
+import { DB, createPage, queryDatabase, prop, cors, requireAuth, monthStr } from "./_notion.js";
 
 // 即時匯率查詢快取（同一次 function 執行期間內共用，減少重複打外部 API）
 const rateCache = {};
@@ -20,6 +20,7 @@ async function getExchangeRate(currency) {
 export default async function handler(req, res) {
   cors(res);
   if (req.method === "OPTIONS") return res.status(200).end();
+  if (!requireAuth(req, res)) return;
 
   // 即時匯率查詢（港幣/歐元 → 台幣，當日匯率）
   if (req.method === "GET" && req.query.action === "exchange-rate") {

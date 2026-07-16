@@ -1,8 +1,9 @@
-import { DB, queryDatabase, cors } from "./_notion.js";
+import { DB, queryDatabase, cors, requireAuth } from "./_notion.js";
 
 export default async function handler(req, res) {
   cors(res);
   if (req.method === "OPTIONS") return res.status(200).end();
+  if (!requireAuth(req, res)) return;
 
   const { orderId } = req.query;
   if (!orderId) return res.status(400).json({ success: false, error: "orderId required" });

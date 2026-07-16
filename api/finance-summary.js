@@ -1,4 +1,4 @@
-import { DB, queryDatabase, cors, monthStr } from "./_notion.js";
+import { DB, queryDatabase, cors, requireAuth, monthStr } from "./_notion.js";
 
 const BASE_FIXED_COST = 97649;
 
@@ -111,6 +111,7 @@ export async function computeSummary(month) {
 export default async function handler(req, res) {
   cors(res);
   if (req.method === "OPTIONS") return res.status(200).end();
+  if (!requireAuth(req, res)) return;
 
   try {
     // ?trend=1&months=N：回傳近 N 個月趨勢（合併自 finance-trend.js，節省 Vercel serverless function 額度）
